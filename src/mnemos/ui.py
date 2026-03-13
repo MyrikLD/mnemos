@@ -1,12 +1,16 @@
+import hashlib
+import hmac
 import json
 import math
+import secrets
 from pathlib import Path
 
 import sqlalchemy as sa
-from mnemos.db import APISessionDep
-from fastapi import APIRouter, Form, HTTPException, Request, Response
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from mnemos.config import settings
+from mnemos.db import APISessionDep
 from mnemos.embeddings import embed
 from mnemos.models import Memory, MemoryTag, Tag
 from mnemos.search import hybrid_search
@@ -16,6 +20,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
+
+
+def _session_token() -> str:
+    return hmac.new(settings.password.encode(), b"mnemos-ui-session", hashlib.sha256).hexdigest()
+
+
+def _require_auth(request: Request) -> None:
+    if not settings.password:
+        return
+    token = request.cookies.get("mnemos_session")
+    if not token or not hmac.compare_digest(token, _session_token()):
+        raise HTTPException(status_code=307, headers={"Location": f"/ui/login?next={request.url.path}"})
 
 _COLS = (
     Memory.id,
@@ -40,7 +56,27 @@ async def _fetch_tags(s: AsyncSession, memory_ids: list[int]) -> dict[int, list[
     return result
 
 
-@router.get("/", response_class=HTMLResponse)
+@router.get("/ui/login", response_class=HTMLResponse)
+async def login_get(request: Request, next: str = "/") -> HTMLResponse:
+    return templates.TemplateResponse(request, "login.html", {"next": next})
+
+
+@router.post("/ui/login")
+async def login_post(
+    request: Request,
+    password: str = Form(),
+    next: str = Form(default="/"),
+) -> Response:
+    if not settings.password or not secrets.compare_digest(password, settings.password):
+        return templates.TemplateResponse(
+            request, "login.html", {"next": next, "error": "Incorrect password."}, status_code=401
+        )
+    response = RedirectResponse(next if next.startswith("/") else "/", status_code=303)
+    response.set_cookie("mnemos_session", _session_token(), httponly=True, samesite="lax")
+    return response
+
+
+@router.get("/", response_class=HTMLResponse, dependencies=[Depends(_require_auth)])
 async def index(
     request: Request,
     s: APISessionDep,
@@ -103,7 +139,7 @@ async def index(
     )
 
 
-@router.get("/search", response_class=HTMLResponse)
+@router.get("/search", response_class=HTMLResponse, dependencies=[Depends(_require_auth)])
 async def search(request: Request, s: APISessionDep, q: str = "") -> HTMLResponse:
     results = []
     if q:
@@ -140,7 +176,7 @@ async def search(request: Request, s: APISessionDep, q: str = "") -> HTMLRespons
     )
 
 
-@router.get("/memory/{id}", response_class=HTMLResponse)
+@router.get("/memory/{id}", response_class=HTMLResponse, dependencies=[Depends(_require_auth)])
 async def memory_detail(request: Request, id: int, s: APISessionDep) -> HTMLResponse:
     row = (
         (await s.execute(select(*_COLS).where(Memory.id == id)))
@@ -162,7 +198,7 @@ async def memory_detail(request: Request, id: int, s: APISessionDep) -> HTMLResp
     return templates.TemplateResponse(request, "memory.html", {"memory": memory})
 
 
-@router.put("/memory/{id}", response_class=HTMLResponse)
+@router.put("/memory/{id}", response_class=HTMLResponse, dependencies=[Depends(_require_auth)])
 async def update_memory(
     request: Request,
     id: int,
@@ -257,7 +293,7 @@ async def update_memory(
     )
 
 
-@router.delete("/memory/{id}")
+@router.delete("/memory/{id}", dependencies=[Depends(_require_auth)])
 async def delete_memory_ui(id: int, s: APISessionDep) -> Response:
     await s.execute(text("DELETE FROM memories_vec WHERE memory_id = :id"), {"id": id})
     result = await s.execute(delete(Memory).where(Memory.id == id).returning(Memory.id))

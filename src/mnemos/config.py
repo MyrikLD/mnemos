@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     default_limit: int = 10
     sim_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
     oauth_jwt_secret: str | None = None
-    oauth_password: str | None = None
+    password: str | None = None
 
 
 settings = Settings()

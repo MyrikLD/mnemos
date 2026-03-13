@@ -45,9 +45,9 @@ All settings use the `MNEMOS_` prefix. See [`.env.example`](.env.example) for th
 | `MNEMOS_PORT`             | `8000`                | Server port                  |
 | `MNEMOS_BASE_URL`         | —                     | Public URL (required for OAuth) |
 | `MNEMOS_OAUTH_JWT_SECRET` | —                     | Enables OAuth when set       |
-| `MNEMOS_OAUTH_PASSWORD`   | —                     | Login page password          |
+| `MNEMOS_PASSWORD`   | —                     | Login page password          |
 
-OAuth is enabled only when `MNEMOS_BASE_URL`, `MNEMOS_OAUTH_JWT_SECRET`, and `MNEMOS_OAUTH_PASSWORD` are all set.
+OAuth is enabled only when `MNEMOS_BASE_URL`, `MNEMOS_OAUTH_JWT_SECRET`, and `MNEMOS_PASSWORD` are all set.
 
 ## MCP Tools
 

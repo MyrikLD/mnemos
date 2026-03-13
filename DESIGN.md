@@ -99,7 +99,7 @@ Via `pydantic-settings`. Sources in priority order: environment variables (prefi
 | `MNEMOS_DEFAULT_LIMIT`    | `10`                     | Default result limit               |
 | `MNEMOS_SIM_THRESHOLD`    | `0.7`                    | Default cosine similarity threshold|
 | `MNEMOS_OAUTH_JWT_SECRET` | —                        | JWT signing secret                 |
-| `MNEMOS_OAUTH_PASSWORD`   | —                        | Login page password                |
+| `MNEMOS_PASSWORD`   | —                        | Login page password                |
 
 ---
 
@@ -286,7 +286,7 @@ OAuth 2.1 — `MnemosOAuthProvider(OAuthProvider)` in `oauth.py`, full in-proces
 - Dynamic Client Registration enabled (scope: `mcp`, default: `mcp`)
 - Token revocation via `_revoke_pair`: removes from `_access_tokens` / `_refresh_tokens` and the paired token
 
-OAuth is enabled only when all three are set: `MNEMOS_OAUTH_JWT_SECRET`, `MNEMOS_OAUTH_PASSWORD`, `MNEMOS_BASE_URL`. If any one is missing — server starts without authentication.
+OAuth is enabled only when all three are set: `MNEMOS_OAUTH_JWT_SECRET`, `MNEMOS_PASSWORD`, `MNEMOS_BASE_URL`. If any one is missing — server starts without authentication.
 
 ---
 
