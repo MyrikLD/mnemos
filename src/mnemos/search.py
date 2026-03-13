@@ -7,9 +7,9 @@ from mnemos.schemas import SearchResult
 
 
 def fts5_escape(query: str) -> str:
-    """Wrap each whitespace-separated token in double quotes to suppress FTS5 operator parsing."""
+    """Escape query for FTS5: quote each token to suppress operator parsing, join with AND."""
     tokens = query.split()
-    return " ".join('"' + t.replace('"', "") + '"' for t in tokens if t)
+    return " AND ".join('"' + t.replace('"', "") + '"' for t in tokens if t)
 
 
 async def hybrid_search(

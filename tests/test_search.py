@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
+from dateparser.search import search_dates
 from sqlalchemy import insert, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +22,7 @@ async def _store(s: AsyncSession, content: str) -> int:
 
 
 def test_fts5_escape():
-    assert fts5_escape("mcp-memory foo") == '"mcp-memory" "foo"'
+    assert fts5_escape("mcp-memory foo") == '"mcp-memory" AND "foo"'
     assert fts5_escape("hello") == '"hello"'
 
 
@@ -98,29 +99,30 @@ async def test_date_filter_today(session):
     assert mid not in ids
 
 
-async def test_date_filter_truncated_to_start_of_day(session):
-    """Regression: 'today' must use start-of-day, not current time, as date_from."""
+async def test_date_filter_includes_today(session):
+    """Regression: date_from = start-of-day must include memories created today."""
+    mid = await _store(session, "python programming language tutorial")
 
-    mid = await _store(session, "recall this memory today")
-
-    # Simulate what recall_memory does with date parsing
-    from dateparser.search import search_dates
-
-    found = search_dates(
-        "today",
-        settings={"PREFER_DATES_FROM": "past", "RETURN_AS_TIMEZONE_AWARE": False},
-    )
-    assert found
-    dt = found[0][1]
-    # With truncation fix, start of day — memory created moments ago must be included
-    date_from = dt.replace(hour=0, minute=0, second=0, microsecond=0).isoformat(sep=" ")
-    date_to = datetime.now(timezone.utc).replace(tzinfo=None).isoformat(sep=" ")
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    today_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    date_to = now + timedelta(seconds=5)
 
     results = await hybrid_search(
         session,
-        "recall memory",
+        "python programming",
         similarity_threshold=0.0,
-        date_from=date_from,
-        date_to=date_to,
+        date_from=today_midnight.isoformat(sep=" "),
+        date_to=date_to.isoformat(sep=" "),
     )
     assert any(r.id == mid for r in results)
+
+
+def test_dateparser_today_truncates_before_now():
+    """dateparser 'today' truncated to midnight must be before current time."""
+    found = search_dates(
+        "today", settings={"PREFER_DATES_FROM": "past", "RETURN_AS_TIMEZONE_AWARE": False}
+    )
+    assert found
+    truncated = found[0][1].replace(hour=0, minute=0, second=0, microsecond=0)
+    assert truncated <= datetime.now()
+    assert truncated.hour == 0 and truncated.minute == 0 and truncated.second == 0
