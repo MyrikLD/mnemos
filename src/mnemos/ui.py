@@ -67,7 +67,7 @@ async def login_post(
     password: str = Form(),
     next: str = Form(default="/"),
 ) -> Response:
-    if not settings.password or not secrets.compare_digest(password, settings.password):
+    if not settings.password or not secrets.compare_digest(password.encode(), settings.password.encode()):
         return templates.TemplateResponse(
             request, "login.html", {"next": next, "error": "Incorrect password."}, status_code=401
         )

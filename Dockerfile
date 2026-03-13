@@ -5,11 +5,12 @@ WORKDIR /app
 # Copy lockfile first for better layer caching
 COPY pyproject.toml uv.lock ./
 RUN uv sync --no-dev --frozen --no-install-project
-COPY src/ src/
-RUN uv sync --no-dev --frozen
 # Download ONNX model files
 COPY scripts/ scripts/
 RUN pip install --no-cache-dir huggingface_hub && python scripts/download_model.py
+# Copy source code
+COPY src/ src/
+RUN uv sync --no-dev --frozen
 
 # ── Stage 2: runtime image ────────────────────────────────────────────────────
 FROM python:3.12-slim AS runtime

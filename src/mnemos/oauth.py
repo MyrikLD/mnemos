@@ -170,7 +170,7 @@ class MnemosOAuthProvider(OAuthProvider):
                 status_code=400,
             )
 
-        if not secrets.compare_digest(password, self._password):
+        if not secrets.compare_digest(password.encode(), self._password.encode()):
             logger.warning("login POST: wrong password client_id=%s", pending.client_id)
             return HTMLResponse(
                 _LOGIN_HTML.format(
