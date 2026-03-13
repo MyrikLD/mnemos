@@ -76,7 +76,7 @@ async def list_memories(
                 id=row["id"],
                 content=row["content"],
                 memory_type=row["memory_type"],
-                metadata=row["metadata"],
+                metadata=row["extra_data"],
                 tags=tags_map.get(row["id"], []),
                 created_at=str(row["created_at"]),
             )
