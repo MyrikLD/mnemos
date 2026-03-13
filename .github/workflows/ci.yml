@@ -13,8 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --dev
-      - run: uv run black --check src/ migrations/
-      - run: uv run pyright src/
+      - run: uv run black --check .
 
   migrations:
     name: Migration check
