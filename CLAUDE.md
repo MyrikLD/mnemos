@@ -57,7 +57,7 @@ pytest tests/path/test_file.py::test_name -x
 
 **Config prefix:** All env vars use `MCP_MEMORY_` prefix. `.env` file is supported
 
-**ONNX model files** (`src/mnemos/onnx/model.onnx`, `tokenizer.json`) are committed to git — no runtime downloads.
+**ONNX model files** (`src/mnemos/onnx/model.onnx`, `tokenizer.json`) are excluded from git. Download before running: `uv run python scripts/download_model.py`. Downloaded from `sentence-transformers/all-MiniLM-L6-v2` on HuggingFace.
 
 ## Project Layout
 
