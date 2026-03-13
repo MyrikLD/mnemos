@@ -51,6 +51,8 @@ pytest tests/path/test_file.py::test_name -x
 
 **Model style:** Models are defined with `import sqlalchemy as sa` and classical `sa.Column(...)` — no `Mapped`, no `mapped_column`, no type annotations on columns, no `from __future__ import annotations`, no `__all__`.
 
+**Structured data:** Use Pydantic `BaseModel` for structured objects — no `dataclass`.
+
 **Alembic engine:** `migrations/env.py` uses a **synchronous** `create_engine("sqlite:///...")` (not aiosqlite). This is required because `AsyncAdapt_aiosqlite_connection` does not expose `enable_load_extension`, which is needed to load `sqlite-vec` during migrations.
 
 **No logic in `__init__.py`:** All logic lives in dedicated modules. `__init__.py` files are re-exports only.
