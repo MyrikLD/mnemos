@@ -1,17 +1,9 @@
-from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mnemos.config import settings
 from mnemos.embeddings import embed
-
-
-class SearchResult(BaseModel):
-    id: int
-    content: str
-    memory_type: str | None
-    rrf_score: float
-    vec_similarity: float | None
+from mnemos.schemas import SearchResult
 
 
 async def hybrid_search(
@@ -24,7 +16,11 @@ async def hybrid_search(
 ) -> list[SearchResult]:
     n = (limit or settings.default_limit) * 4  # over-fetch before RRF cutoff
     k = settings.rrf_k
-    threshold = similarity_threshold if similarity_threshold is not None else settings.sim_threshold
+    threshold = (
+        similarity_threshold
+        if similarity_threshold is not None
+        else settings.sim_threshold
+    )
 
     date_filter = ""
     date_params: dict = {}
@@ -76,9 +72,7 @@ async def hybrid_search(
     contents: dict[int, tuple] = {
         row.id: (row.content, row.memory_type) for row in bm25_rows
     }
-    contents.update(
-        {row.id: (row.content, row.memory_type) for row in vec_rows}
-    )
+    contents.update({row.id: (row.content, row.memory_type) for row in vec_rows})
 
     # RRF fusion
     all_ids = set(bm25_ranks) | set(vec_ranks)

@@ -1,6 +1,5 @@
-from contextlib import asynccontextmanager
-
 import sqlite_vec  # type: ignore[import-untyped]
+from fastmcp.dependencies import Depends
 from mnemos.config import settings
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
@@ -38,17 +37,11 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
     return _session_factory
 
 
-@asynccontextmanager
-async def session():
-    async with get_session_factory()() as s:
-        yield s
-
-
 async def session_dep():
     async with get_session_factory()() as s:
         yield s
 
 
-SessionDep = Annotated[AsyncSession, Depends(session_dep)]
+SessionDep = Depends(session_dep)
 
-__all__ = ["session", "SessionDep"]
+__all__ = ["SessionDep"]

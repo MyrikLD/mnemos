@@ -47,7 +47,9 @@ pytest tests/path/test_file.py::test_name -x
 
 ## Key Conventions
 
-**SQLAlchemy usage:** Core queries only — no ORM relationships (`relationship`), no lazy loading. Queries are written with `select()`, `insert()`, etc. Sessions used as async context managers via `session()` (general use) or `get_session()` (FastAPI dependency); explicit `commit()` on success, automatic `rollback()` on error.
+**SQLAlchemy usage:** Core queries only — no ORM relationships (`relationship`), no lazy loading. Queries are written with `select()`, `insert()`, etc. Use `sa.text()` only for sqlite-specific syntax (e.g. `vec_version()`, `memories_fts`, `memories_vec`). Use `.mappings().all()` for multi-column row results — access by column name, not index. Sessions used as async context managers via `session()` (general use) or `SessionDep` (FastAPI dependency). **Never call `commit()` or `rollback()` manually** — `session()` commits on success and rolls back on exception automatically.
+
+**FastMCP tool structure:** Each tool file defines its own `mcp = FastMCP()` and registers tools with `@mcp.tool`. `tools/__init__.py` re-exports each `mcp` instance. `server.py` mounts them via `mcp.mount()`. Sessions injected via `s: AsyncSession = SessionDep  # type: ignore[assignment]` using `fastmcp.dependencies.Depends`.
 
 **Model style:** Models are defined with `import sqlalchemy as sa` and classical `sa.Column(...)` — no `Mapped`, no `mapped_column`, no type annotations on columns, no `from __future__ import annotations`, no `__all__`.
 

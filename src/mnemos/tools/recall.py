@@ -1,0 +1,76 @@
+from datetime import datetime, timezone
+
+from dateparser.search import search_dates  # type: ignore[import-untyped]
+from fastmcp import FastMCP
+from mnemos.db import SessionDep
+from mnemos.models import Memory
+from mnemos.schemas import RecallResult
+from mnemos.search import hybrid_search
+from mnemos.tools.retrieve import _fetch_tags
+from pydantic import TypeAdapter
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+mcp = FastMCP()
+
+_output_schema = TypeAdapter(list[RecallResult]).json_schema()
+
+
+@mcp.tool(output_schema=_output_schema)
+async def recall_memory(
+    query: str,
+    n_results: int = 5,
+    s: AsyncSession = SessionDep,  # type: ignore[assignment]
+) -> list[RecallResult]:
+    """Search memories by time expression + semantics.
+
+    Examples: "last week", "yesterday", "about Python last month".
+    """
+    date_from: str | None = None
+    date_to: str | None = None
+    semantic_query = query
+
+    found = search_dates(
+        query,
+        settings={"PREFER_DATES_FROM": "past", "RETURN_AS_TIMEZONE_AWARE": False},
+    )
+    if found:
+        dts = [dt for _, dt in found]
+        date_from = min(dts).isoformat(sep=" ")
+        date_to = datetime.now(timezone.utc).replace(tzinfo=None).isoformat(sep=" ")
+
+        remaining = query
+        for date_str, _ in found:
+            remaining = remaining.replace(date_str, "")
+        semantic_query = remaining.strip() or query
+
+    results = await hybrid_search(
+        s,
+        query=semantic_query,
+        limit=n_results,
+        similarity_threshold=0.0,
+        date_from=date_from,
+        date_to=date_to,
+    )
+
+    if not results:
+        return []
+
+    ids = [r.id for r in results]
+    tags_map = await _fetch_tags(s, ids)
+
+    rows = await s.execute(
+        select(Memory.id, Memory.created_at).where(Memory.id.in_(ids))
+    )
+    created_map = {row.id: row.created_at for row in rows.fetchall()}
+
+    return [
+        RecallResult(
+            id=r.id,
+            content=r.content,
+            memory_type=r.memory_type,
+            tags=tags_map.get(r.id, []),
+            created_at=str(created_map.get(r.id, "")),
+        )
+        for r in results
+    ]
