@@ -2,34 +2,45 @@
 {% block title %}Mnemos{% endblock %}
 {% block content %}
 
-<form method="get" class="filters">
+<div class="page-header">
+  <h1 class="page-title">Memories</h1>
+</div>
+
+<form method="get" class="toolbar">
   <input class="filter-input" name="memory_type" placeholder="Filter by type…"
-         value="{{ memory_type }}" style="max-width:180px">
+         value="{{ memory_type }}" style="max-width:200px">
   <input class="filter-input" name="tag" placeholder="Filter by tag…"
-         value="{{ tag }}" style="max-width:180px">
+         value="{{ tag }}" style="max-width:200px">
   <button type="submit" class="btn btn-ghost btn-sm">Apply</button>
   {% if memory_type or tag %}
-  <a href="/" class="btn btn-ghost btn-sm">Clear</a>
+  <a href="/" class="btn btn-ghost btn-sm">Clear filters</a>
   {% endif %}
 </form>
 
-<p class="info-line">
-  {{ total }} memor{{ 'y' if total == 1 else 'ies' }}
-  {% if memory_type %} · type: <strong>{{ memory_type }}</strong>{% endif %}
-  {% if tag %} · tag: <strong>#{{ tag }}</strong>{% endif %}
+<p class="info-bar">
+  <span>{{ total }} memor{{ 'y' if total == 1 else 'ies' }}</span>
+  {% if memory_type %}
+  <span style="color:var(--text-4)">·</span>
+  <span>type: <strong>{{ memory_type }}</strong></span>
+  {% endif %}
+  {% if tag %}
+  <span style="color:var(--text-4)">·</span>
+  <span>tag: <strong>#{{ tag }}</strong></span>
+  {% endif %}
 </p>
 
 {% for m in memories %}
 <div id="mem-{{ m.id }}" class="card">
   <div class="card-header">
-    <a href="/memory/{{ m.id }}" style="flex:1; min-width:0; color:inherit">
+    <a href="/memory/{{ m.id }}" style="flex:1; min-width:0; color:inherit; text-decoration:none;">
       <div class="card-content">{{ m.content | truncate(280) }}</div>
     </a>
     <button class="btn btn-sm btn-danger"
       hx-delete="/memory/{{ m.id }}"
       hx-target="#mem-{{ m.id }}"
       hx-swap="outerHTML"
-      hx-confirm="Delete this memory?">Delete</button>
+      hx-confirm="Delete this memory?"
+      style="flex-shrink:0">Delete</button>
   </div>
   <div class="card-meta">
     {% if m.memory_type %}<span class="badge badge-type">{{ m.memory_type }}</span>{% endif %}
@@ -39,7 +50,9 @@
 </div>
 {% else %}
 <div class="empty-state">
-  <p>No memories yet.</p>
+  <div class="empty-state-icon">🧠</div>
+  <div class="empty-state-title">No memories yet</div>
+  <div class="empty-state-desc">Memories stored via MCP will appear here.</div>
 </div>
 {% endfor %}
 

@@ -6,7 +6,7 @@
 {% endif %}
 
 <div class="detail-card">
-  <div style="margin-bottom:1rem">
+  <div style="margin-bottom:1.25rem">
     <div class="detail-label">Content</div>
     <div class="detail-content">{{ memory.content }}</div>
   </div>
@@ -24,7 +24,7 @@
 </div>
 
 <div class="detail-card">
-  <div class="section-title">Edit</div>
+  <div class="section-title">Edit memory</div>
   <form hx-put="/memory/{{ memory.id }}"
         hx-target="#page-content"
         hx-swap="innerHTML">
@@ -35,21 +35,21 @@
     </div>
     <div class="form-group">
       <label class="form-label" for="memory_type">
-        Type <span class="form-hint">(note, fact, reminder, …)</span>
+        Type <span class="form-hint">— note, fact, reminder, …</span>
       </label>
       <input class="form-input" name="memory_type" id="memory_type"
              value="{{ memory.memory_type }}" placeholder="optional">
     </div>
     <div class="form-group">
       <label class="form-label" for="tags_str">
-        Tags <span class="form-hint">(comma-separated)</span>
+        Tags <span class="form-hint">— comma-separated</span>
       </label>
       <input class="form-input" name="tags_str" id="tags_str"
              value="{{ memory.tags | join(', ') }}" placeholder="tag1, tag2">
     </div>
     <div class="form-group">
       <label class="form-label" for="metadata_str">
-        Metadata <span class="form-hint">(JSON object)</span>
+        Metadata <span class="form-hint">— JSON object</span>
       </label>
       <textarea class="form-textarea form-mono" name="metadata_str" id="metadata_str"
                 rows="4" placeholder="{}">{{ memory.metadata | tojson(indent=2) if memory.metadata else "" }}</textarea>
