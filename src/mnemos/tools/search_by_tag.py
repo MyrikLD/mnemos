@@ -1,7 +1,7 @@
 from typing import Literal
 
 from fastmcp import FastMCP
-from mnemos.db import SessionDep
+from mnemos.db import MCPSessionDep
 from mnemos.models import Memory, MemoryTag, Tag
 from mnemos.schemas import MemoryListItem
 from mnemos.tools.retrieve import _fetch_tags
@@ -23,7 +23,7 @@ _COLS = (
 async def search_by_tag(
     tags: list[str],
     operation: Literal["AND", "OR"] = "AND",
-    s: AsyncSession = SessionDep,  # type: ignore[assignment]
+    s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]
 ) -> list[MemoryListItem]:
     """Search memories by tags. AND: all tags present. OR: any tag present."""
     if not tags:

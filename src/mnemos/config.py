@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="MCP_MEMORY_", env_file=".env", extra="ignore"
+        env_prefix="MNEMOS_", env_file=".env", extra="ignore"
     )
 
     db_path: Path = Path("/data/memory.db")

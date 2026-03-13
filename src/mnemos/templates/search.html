@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Mnemos — Search{% endblock %}
+{% block content %}
+
+{% if q %}
+<p class="info-line">
+  {{ results | length }} result{{ 's' if results | length != 1 else '' }}
+  for "<strong>{{ q }}</strong>"
+</p>
+
+{% for m in results %}
+<div class="card">
+  <div class="card-header">
+    <a href="/memory/{{ m.id }}" style="flex:1; min-width:0; color:inherit">
+      <div class="card-content">{{ m.content | truncate(280) }}</div>
+    </a>
+    <span style="font-size:.75rem; color:#a1a1aa; white-space:nowrap; padding-top:.25rem">
+      {{ m.rrf_score }}
+    </span>
+  </div>
+  <div class="card-meta">
+    {% if m.memory_type %}<span class="badge badge-type">{{ m.memory_type }}</span>{% endif %}
+    {% for t in m.tags %}<span class="tag">#{{ t }}</span>{% endfor %}
+    <span class="card-date">{{ m.created_at[:19] if m.created_at else '' }}</span>
+  </div>
+</div>
+{% else %}
+<div class="empty-state">
+  <p>No results found.</p>
+</div>
+{% endfor %}
+
+{% else %}
+<div class="empty-state">
+  <p>Enter a query to search your memories.</p>
+</div>
+{% endif %}
+
+{% endblock %}

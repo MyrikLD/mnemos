@@ -1,5 +1,9 @@
-import sqlite_vec  # type: ignore[import-untyped]
-from fastmcp.dependencies import Depends
+from contextlib import asynccontextmanager
+from typing import Annotated
+
+import sqlite_vec
+from fastapi import Depends as APIDepends
+from fastmcp.dependencies import Depends as MCPDepends
 from mnemos.config import settings
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
@@ -23,9 +27,13 @@ def get_engine() -> AsyncEngine:
 
         @event.listens_for(_engine.sync_engine, "connect")
         def on_connect(dbapi_conn, _):  # noqa: ANN001
-            dbapi_conn.enable_load_extension(True)
-            sqlite_vec.load(dbapi_conn)
-            dbapi_conn.enable_load_extension(False)
+            # aiosqlite wraps the raw sqlite3 connection;
+            # driver_connection is aiosqlite.Connection, ._conn is sqlite3.Connection
+            raw = getattr(dbapi_conn, "driver_connection", dbapi_conn)
+            raw = getattr(raw, "_conn", raw)
+            raw.enable_load_extension(True)
+            sqlite_vec.load(raw)
+            raw.enable_load_extension(False)
 
     return _engine
 
@@ -38,10 +46,13 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
 
 
 async def session_dep():
-    async with get_session_factory()() as s:
+    _session_factory = get_session_factory()
+    async with _session_factory() as s, s.begin():
         yield s
 
 
-SessionDep = Depends(session_dep)
+MCPSessionDep = MCPDepends(asynccontextmanager(session_dep))
+# APISessionDep = APIDepends(session_dep)
+APISessionDep = Annotated[AsyncSession, APIDepends(session_dep)]
 
-__all__ = ["SessionDep"]
+__all__ = ["MCPSessionDep", "APISessionDep"]

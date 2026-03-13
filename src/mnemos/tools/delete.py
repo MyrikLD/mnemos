@@ -1,5 +1,5 @@
 from fastmcp import FastMCP
-from mnemos.db import SessionDep
+from mnemos.db import MCPSessionDep
 from mnemos.models import Memory
 from mnemos.schemas import DeleteResult
 from sqlalchemy import delete, text
@@ -9,7 +9,7 @@ mcp = FastMCP()
 
 
 @mcp.tool(output_schema=DeleteResult.model_json_schema())
-async def delete_memory(id: int, s: AsyncSession = SessionDep) -> DeleteResult:  # type: ignore[assignment]
+async def delete_memory(id: int, s: AsyncSession = MCPSessionDep) -> DeleteResult:  # type: ignore[assignment]
     """Delete a memory by ID. Removes from vec index and FTS (via trigger)."""
     # Delete from vec index manually (no trigger for vec0)
     await s.execute(text("DELETE FROM memories_vec WHERE memory_id = :id"), {"id": id})

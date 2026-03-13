@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from dateparser.search import search_dates  # type: ignore[import-untyped]
 from fastmcp import FastMCP
-from mnemos.db import SessionDep
+from mnemos.db import MCPSessionDep
 from mnemos.models import Memory
 from mnemos.schemas import RecallResult
 from mnemos.search import hybrid_search
@@ -17,7 +17,7 @@ mcp = FastMCP()
 async def recall_memory(
     query: str,
     n_results: int = 5,
-    s: AsyncSession = SessionDep,  # type: ignore[assignment]
+    s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]
 ) -> list[RecallResult]:
     """Search memories by time expression + semantics.
 

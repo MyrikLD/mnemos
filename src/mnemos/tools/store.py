@@ -1,5 +1,5 @@
 from fastmcp import FastMCP
-from mnemos.db import SessionDep
+from mnemos.db import MCPSessionDep
 from mnemos.embeddings import embed
 from mnemos.models import Memory, MemoryTag, Tag
 from mnemos.schemas import StoreResult
@@ -17,7 +17,7 @@ async def store_memory(
     tags: list[str] | None = None,
     metadata: dict | None = None,
     client_hostname: str | None = None,
-    s: AsyncSession = SessionDep,  # type: ignore[assignment]
+    s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]
 ) -> StoreResult:
     """Save a new memory. Idempotent: returns existing if content already stored."""
     row = await s.execute(

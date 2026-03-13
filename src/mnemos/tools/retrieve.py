@@ -1,5 +1,5 @@
 from fastmcp import FastMCP
-from mnemos.db import SessionDep
+from mnemos.db import MCPSessionDep
 from mnemos.models import Memory, MemoryTag, Tag
 from mnemos.schemas import MemoryResult
 from mnemos.search import hybrid_search
@@ -32,10 +32,10 @@ async def _fetch_metadata(s: AsyncSession, memory_ids: list[int]) -> dict[int, t
 
 @mcp.tool
 async def retrieve_memory(
-        query: str,
-        limit: int = 10,
-        similarity_threshold: float = 0.7,
-        s: AsyncSession = SessionDep,  # type: ignore[assignment]
+    query: str,
+    limit: int = 10,
+    similarity_threshold: float = 0.7,
+    s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]
 ) -> list[MemoryResult]:
     """Hybrid semantic + full-text search over stored memories."""
     results = await hybrid_search(

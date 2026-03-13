@@ -1,7 +1,7 @@
 import math
 
 from fastmcp import FastMCP
-from mnemos.db import SessionDep
+from mnemos.db import MCPSessionDep
 from mnemos.models import Memory, MemoryTag, Tag
 from mnemos.schemas import MemoryListItem, MemoryPage
 from mnemos.tools.retrieve import _fetch_tags
@@ -25,7 +25,7 @@ async def list_memories(
     page_size: int = 10,
     memory_type: str | None = None,
     tag: str | None = None,
-    s: AsyncSession = SessionDep,  # type: ignore[assignment]
+    s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]
 ) -> MemoryPage:
     """Paginated list of memories with optional type/tag filters."""
     page_size = min(page_size, 100)

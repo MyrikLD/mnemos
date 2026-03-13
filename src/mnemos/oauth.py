@@ -114,11 +114,11 @@ class MnemosOAuthProvider(OAuthProvider):
 
         self._clients: dict[str, OAuthClientInformationFull] = {}
         self._auth_codes: dict[str, AuthorizationCode] = {}
-        self._access_tokens: dict[str, AccessToken] = {}   # jti → AccessToken
-        self._refresh_tokens: dict[str, RefreshToken] = {} # raw token → RefreshToken
-        self._token_to_jti: dict[str, str] = {}            # access token str → jti
-        self._access_to_refresh: dict[str, str] = {}       # access str → refresh str
-        self._refresh_to_access: dict[str, str] = {}       # refresh str → access str
+        self._access_tokens: dict[str, AccessToken] = {}  # jti → AccessToken
+        self._refresh_tokens: dict[str, RefreshToken] = {}  # raw token → RefreshToken
+        self._token_to_jti: dict[str, str] = {}  # access token str → jti
+        self._access_to_refresh: dict[str, str] = {}  # access str → refresh str
+        self._refresh_to_access: dict[str, str] = {}  # refresh str → access str
         self._pending: dict[str, _PendingAuth] = {}
 
     # ------------------------------------------------------------------
@@ -139,7 +139,9 @@ class MnemosOAuthProvider(OAuthProvider):
         pending_id = request.query_params.get("id", "")
         pending = self._pending.get(pending_id)
         if not pending or pending.expires_at < time.time():
-            logger.warning("login GET: invalid/expired pending_id=%s...", pending_id[:8])
+            logger.warning(
+                "login GET: invalid/expired pending_id=%s...", pending_id[:8]
+            )
             return HTMLResponse(
                 "<h3>Authorization request expired. Please try again.</h3>",
                 status_code=400,
@@ -160,7 +162,9 @@ class MnemosOAuthProvider(OAuthProvider):
         pending = self._pending.get(pending_id)
         if not pending or pending.expires_at < time.time():
             self._pending.pop(pending_id, None)
-            logger.warning("login POST: invalid/expired pending_id=%s...", pending_id[:8])
+            logger.warning(
+                "login POST: invalid/expired pending_id=%s...", pending_id[:8]
+            )
             return HTMLResponse(
                 "<h3>Authorization request expired. Please try again.</h3>",
                 status_code=400,
@@ -237,7 +241,11 @@ class MnemosOAuthProvider(OAuthProvider):
             expires_at=time.time() + PENDING_TTL,
         )
         login_url = f"{self._base_url}/login?{urlencode({'id': pending_id})}"
-        logger.info("authorize → login client_id=%s pending=%s...", client.client_id, pending_id[:8])
+        logger.info(
+            "authorize → login client_id=%s pending=%s...",
+            client.client_id,
+            pending_id[:8],
+        )
         return login_url
 
     async def load_authorization_code(
@@ -337,7 +345,10 @@ class MnemosOAuthProvider(OAuthProvider):
 
         refresh_jti = secrets.token_urlsafe(32)
         refresh_str = self._jwt.issue_refresh_token(
-            client_id=client_id, scopes=scopes, jti=refresh_jti, expires_in=REFRESH_TOKEN_TTL
+            client_id=client_id,
+            scopes=scopes,
+            jti=refresh_jti,
+            expires_in=REFRESH_TOKEN_TTL,
         )
         self._refresh_tokens[refresh_str] = RefreshToken(
             token=refresh_str,

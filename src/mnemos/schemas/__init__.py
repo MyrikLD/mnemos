@@ -4,3 +4,4 @@ from .list_memories import MemoryListItem, MemoryPage
 from .recall import RecallResult
 from .search import MemoryResult, SearchResult
 from .store import StoreResult
+from .update import UpdateMemoryRequest
