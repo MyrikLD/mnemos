@@ -120,7 +120,8 @@ async def test_date_filter_includes_today(session):
 def test_dateparser_today_truncates_before_now():
     """dateparser 'today' truncated to midnight must be before current time."""
     found = search_dates(
-        "today", settings={"PREFER_DATES_FROM": "past", "RETURN_AS_TIMEZONE_AWARE": False}
+        "today",
+        settings={"PREFER_DATES_FROM": "past", "RETURN_AS_TIMEZONE_AWARE": False},
     )
     assert found
     truncated = found[0][1].replace(hour=0, minute=0, second=0, microsecond=0)
