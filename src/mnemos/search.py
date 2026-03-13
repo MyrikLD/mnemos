@@ -93,7 +93,8 @@ async def hybrid_search(
             rrf += 1.0 / (k + vec_ranks[doc_id])
 
         distance = vec_distances.get(doc_id)
-        similarity = (1.0 - distance) if distance is not None else None
+        # L2 distance on unit vectors → cosine similarity = 1 - dist²/2
+        similarity = (1.0 - (distance**2) / 2) if distance is not None else None
 
         if similarity is not None and similarity < threshold:
             continue
