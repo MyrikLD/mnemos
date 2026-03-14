@@ -1,8 +1,9 @@
 import logging
 import secrets
 import time
-from dataclasses import dataclass
 from urllib.parse import urlencode
+
+from pydantic import BaseModel
 
 from authlib.jose.errors import JoseError
 from mcp.server.auth.provider import (
@@ -78,8 +79,7 @@ _LOGIN_HTML = """\
 """
 
 
-@dataclass
-class _PendingAuth:
+class _PendingAuth(BaseModel):
     client_id: str
     params: AuthorizationParams
     scopes: list[str]
