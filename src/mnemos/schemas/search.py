@@ -1,10 +1,12 @@
 from pydantic import BaseModel
 
+from .memory_type import MemoryType
+
 
 class SearchResult(BaseModel):
     id: int
     content: str
-    memory_type: str | None
+    memory_type: MemoryType | None
     rrf_score: float
     vec_similarity: float | None
 
@@ -12,7 +14,7 @@ class SearchResult(BaseModel):
 class MemoryResult(BaseModel):
     id: int
     content: str
-    memory_type: str | None
+    memory_type: MemoryType | None
     tags: list[str]
     metadata: dict | None
     created_at: str | None

@@ -5,7 +5,7 @@ from mcp.types import ToolAnnotations
 from mnemos.dao import MemoryDao
 from mnemos.db import MCPSessionDep
 from mnemos.models import Memory, MemoryTag, Tag
-from mnemos.schemas import MemoryListItem, MemoryPage
+from mnemos.schemas import MemoryListItem, MemoryPage, MemoryType
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,7 +27,7 @@ _COLS = (
 async def list_memories(
     page: int = 1,
     page_size: int = 10,
-    memory_type: str | None = None,
+    memory_type: MemoryType | None = None,
     tag: str | None = None,
     s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]
 ) -> MemoryPage:

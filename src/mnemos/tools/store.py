@@ -2,7 +2,7 @@ from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from mnemos.dao import MemoryDao
 from mnemos.db import MCPSessionDep
-from mnemos.schemas import StoreResult
+from mnemos.schemas import MemoryType, StoreResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
 mcp = FastMCP()
@@ -14,7 +14,7 @@ mcp = FastMCP()
 )
 async def store_memory(
     content: str,
-    memory_type: str | None = None,
+    memory_type: MemoryType | None = None,
     tags: list[str] | None = None,
     metadata: dict | None = None,
     client_hostname: str | None = None,

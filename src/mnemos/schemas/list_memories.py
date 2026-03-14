@@ -1,10 +1,12 @@
 from pydantic import BaseModel
 
+from .memory_type import MemoryType
+
 
 class MemoryListItem(BaseModel):
     id: int
     content: str
-    memory_type: str | None
+    memory_type: MemoryType | None
     metadata: dict | None
     tags: list[str]
     created_at: str

@@ -19,6 +19,7 @@ async def hybrid_search(
     similarity_threshold: float | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
+    memory_type: str | None = None,
 ) -> list[SearchResult]:
     n = (limit or settings.default_limit) * 4  # over-fetch before RRF cutoff
     k = settings.rrf_k
@@ -28,14 +29,17 @@ async def hybrid_search(
         else settings.sim_threshold
     )
 
-    date_filter = ""
-    date_params: dict = {}
+    extra_filter = ""
+    extra_params: dict = {}
     if date_from:
-        date_filter += " AND m.created_at >= :date_from"
-        date_params["date_from"] = date_from
+        extra_filter += " AND m.created_at >= :date_from"
+        extra_params["date_from"] = date_from
     if date_to:
-        date_filter += " AND m.created_at <= :date_to"
-        date_params["date_to"] = date_to
+        extra_filter += " AND m.created_at <= :date_to"
+        extra_params["date_to"] = date_to
+    if memory_type:
+        extra_filter += " AND m.memory_type = :memory_type"
+        extra_params["memory_type"] = memory_type
 
     # BM25 via FTS5
     bm25_sql = text(f"""
@@ -43,14 +47,14 @@ async def hybrid_search(
                ROW_NUMBER() OVER (ORDER BY bm25(memories_fts)) AS bm25_rank
         FROM memories_fts
         JOIN memories m ON memories_fts.memory_id = m.id
-        WHERE memories_fts MATCH :query {date_filter}
+        WHERE memories_fts MATCH :query {extra_filter}
         ORDER BY bm25(memories_fts)
         LIMIT :n
     """)
 
     bm25_rows = (
         await session.execute(
-            bm25_sql, {"query": fts5_escape(query), "n": n, **date_params}
+            bm25_sql, {"query": fts5_escape(query), "n": n, **extra_params}
         )
     ).fetchall()
 
@@ -64,13 +68,13 @@ async def hybrid_search(
                ROW_NUMBER() OVER (ORDER BY v.distance) AS vec_rank
         FROM memories_vec v
         JOIN memories m ON v.memory_id = m.id
-        WHERE v.embedding MATCH :vec AND k = :n {date_filter}
+        WHERE v.embedding MATCH :vec AND k = :n {extra_filter}
         ORDER BY v.distance
         LIMIT :n
     """)
 
     vec_rows = (
-        await session.execute(vec_sql, {"vec": vec_str, "n": n, **date_params})
+        await session.execute(vec_sql, {"vec": vec_str, "n": n, **extra_params})
     ).fetchall()
 
     # Build rank maps

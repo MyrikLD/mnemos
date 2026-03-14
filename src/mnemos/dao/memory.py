@@ -48,9 +48,13 @@ class MemoryDao:
                 .on_conflict_do_nothing()
             )
 
+    async def _cleanup_orphan_tags(self) -> None:
+        await self._s.execute(delete(Tag).where(~Tag.id.in_(select(MemoryTag.tag_id))))
+
     async def _replace_tags(self, memory_id: int, tags: list[str]) -> None:
         await self._s.execute(delete(MemoryTag).where(MemoryTag.memory_id == memory_id))
         await self._upsert_tags(memory_id, tags)
+        await self._cleanup_orphan_tags()
 
     async def create(
         self,
@@ -131,6 +135,7 @@ class MemoryDao:
         )
         if row.scalar_one_or_none() is None:
             raise ValueError(f"Memory with id={id} not found")
+        await self._cleanup_orphan_tags()
 
     async def fetch_tags(self, memory_ids: list[int]) -> dict[int, list[str]]:
         rows = await self._s.execute(

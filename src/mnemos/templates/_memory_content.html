@@ -54,10 +54,7 @@
         </div>
         <div class="form-actions">
             <button type="submit" class="btn-primary-sm">Save changes</button>
-            <button type="button" class="btn btn-sm btn-danger"
-                    hx-delete="/memory/{{ memory.id }}"
-                    hx-confirm="Delete this memory?"
-                    hx-on::after-request="if(event.detail.successful) window.location='/'">
+            <button type="button" class="btn btn-sm btn-danger" id="delete-btn-{{ memory.id }}">
                 Delete memory
             </button>
         </div>
@@ -88,6 +85,13 @@
                 body: JSON.stringify(body),
             });
             document.getElementById('page-content').innerHTML = await resp.text();
+            htmx.process(document.getElementById('page-content'));
+        });
+
+        document.getElementById('delete-btn-{{ memory.id }}').addEventListener('click', async function () {
+            if (!confirm('Delete this memory?')) return;
+            const resp = await fetch('/memory/{{ memory.id }}', {method: 'DELETE'});
+            if (resp.ok) window.location.href = '/';
         });
     </script>
 </div>

@@ -6,7 +6,7 @@ from mcp.types import ToolAnnotations
 from mnemos.dao import MemoryDao
 from mnemos.db import MCPSessionDep
 from mnemos.models import Memory
-from mnemos.schemas import RecallResult
+from mnemos.schemas import MemoryType, RecallResult
 from mnemos.search import hybrid_search
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +18,7 @@ mcp = FastMCP()
 async def recall_memory(
     query: str,
     n_results: int = 5,
+    memory_type: MemoryType | None = None,
     s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]
 ) -> list[RecallResult]:
     """Search memories by time expression + semantics.
@@ -55,6 +56,7 @@ async def recall_memory(
         similarity_threshold=0.0,
         date_from=date_from,
         date_to=date_to,
+        memory_type=memory_type,
     )
 
     if not results:
