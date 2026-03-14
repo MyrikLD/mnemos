@@ -10,6 +10,7 @@ from mnemos.tools import (
     retrieve,
     search_by_tag,
     store,
+    update,
 )
 
 
@@ -31,4 +32,5 @@ mcp.mount(recall)
 mcp.mount(list_memories)
 mcp.mount(search_by_tag)
 mcp.mount(delete)
+mcp.mount(update)
 mcp.mount(health)
