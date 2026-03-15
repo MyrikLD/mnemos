@@ -1,11 +1,21 @@
 import hashlib
 import hmac
+import json
 import math
 import secrets
 from pathlib import Path
 
 import sqlalchemy as sa
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    Response,
+    UploadFile,
+)
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
@@ -41,7 +51,6 @@ _COLS = (
     Memory.id,
     Memory.content,
     Memory.memory_type,
-    Memory.extra_data,
     Memory.created_at,
 )
 
@@ -147,16 +156,22 @@ async def search(request: Request, s: APISessionDep, q: str = "") -> HTMLRespons
             dao = MemoryDao(s)
             ids = [r.id for r in raw]
             tags_map = await dao.fetch_tags(ids)
-            meta_map = await dao.fetch_metadata(ids)
+            created_map = {
+                row.id: row.created_at
+                for row in (
+                    await s.execute(
+                        select(Memory.id, Memory.created_at).where(Memory.id.in_(ids))
+                    )
+                ).all()
+            }
             for r in raw:
-                extra_data, created_at = meta_map.get(r.id, (None, None))
                 results.append(
                     {
                         "id": r.id,
                         "content": r.content,
                         "memory_type": r.memory_type,
                         "tags": tags_map.get(r.id, []),
-                        "created_at": str(created_at) if created_at else "",
+                        "created_at": str(created_map.get(r.id, "")),
                         "rrf_score": round(r.rrf_score, 4),
                     }
                 )
@@ -169,23 +184,9 @@ async def search(request: Request, s: APISessionDep, q: str = "") -> HTMLRespons
     "/memory/{id}", response_class=HTMLResponse, dependencies=[Depends(_require_auth)]
 )
 async def memory_detail(request: Request, id: int, s: APISessionDep) -> HTMLResponse:
-    row = (
-        (await s.execute(select(*_COLS).where(Memory.id == id)))
-        .mappings()
-        .one_or_none()
-    )
-    if row is None:
+    memory = await MemoryDao(s).get(id)
+    if memory is None:
         raise HTTPException(status_code=404, detail="Memory not found")
-
-    tags = (await MemoryDao(s).fetch_tags([id])).get(id, [])
-    memory = {
-        "id": row["id"],
-        "content": row["content"],
-        "memory_type": row["memory_type"] or "",
-        "metadata": row["extra_data"],
-        "tags": tags,
-        "created_at": str(row["created_at"]),
-    }
     return templates.TemplateResponse(request, "memory.html", {"memory": memory})
 
 
@@ -198,26 +199,22 @@ async def update_memory(
     s: APISessionDep,
     body: UpdateMemoryRequest,
 ) -> HTMLResponse:
-    row = (
-        (await s.execute(select(*_COLS).where(Memory.id == id)))
-        .mappings()
-        .one_or_none()
-    )
-    if row is None:
+    dao = MemoryDao(s)
+    existing = await dao.get(id)
+    if existing is None:
         raise HTTPException(status_code=404, detail="Memory not found")
 
-    dao = MemoryDao(s)
-    new_content = (body.content or "").strip() or row["content"]
+    new_content = (body.content or "").strip() or existing.content
     new_type = (body.memory_type or "").strip() or None
     new_tags = [t.lower().strip() for t in (body.tags or []) if t.strip()]
 
-    data = {
+    data: dict = {
         "id": id,
         "memory_type": new_type,
         "metadata": body.metadata,
         "tags": new_tags,
     }
-    if new_content != row["content"]:
+    if new_content != existing.content:
         data["content"] = new_content
 
     await dao.update(**data)
@@ -232,7 +229,7 @@ async def update_memory(
                 "memory_type": new_type or "",
                 "metadata": body.metadata,
                 "tags": new_tags,
-                "created_at": str(row["created_at"]),
+                "created_at": existing.created_at,
             },
             "success": "Saved.",
         },
@@ -246,3 +243,59 @@ async def delete_memory_ui(id: int, s: APISessionDep) -> Response:
     except ValueError:
         raise HTTPException(status_code=404, detail="Memory not found")
     return Response(content="", status_code=200)
+
+
+@router.get("/ui/export", dependencies=[Depends(_require_auth)])
+async def export_memories_ui(s: APISessionDep) -> Response:
+    rows = (
+        (await s.execute(select(*_COLS, Memory.extra_data).order_by(Memory.created_at)))
+        .mappings()
+        .all()
+    )
+    ids = [r["id"] for r in rows]
+    tags_map = await MemoryDao(s).fetch_tags(ids) if ids else {}
+    data = [
+        {
+            "content": r["content"],
+            "memory_type": r["memory_type"],
+            "tags": tags_map.get(r["id"], []),
+            "metadata": r["extra_data"],
+            "created_at": str(r["created_at"]),
+        }
+        for r in rows
+    ]
+    return Response(
+        content=json.dumps(data, ensure_ascii=False, indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": "attachment; filename=memories.json"},
+    )
+
+
+@router.post("/ui/import", dependencies=[Depends(_require_auth)])
+async def import_memories_ui(s: APISessionDep, file: UploadFile = File()) -> Response:
+    try:
+        items = json.loads(await file.read())
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    if not isinstance(items, list):
+        raise HTTPException(status_code=400, detail="Expected a JSON array")
+
+    dao = MemoryDao(s)
+    imported = skipped = 0
+    for item in items:
+        if not isinstance(item, dict) or not item.get("content"):
+            skipped += 1
+            continue
+        _, _, created = await dao.create(
+            content=item["content"],
+            memory_type=item.get("memory_type"),
+            metadata=item.get("metadata"),
+            client_hostname=None,
+            tags=item.get("tags") or [],
+        )
+        if created:
+            imported += 1
+        else:
+            skipped += 1
+
+    return RedirectResponse(f"/?imported={imported}&skipped={skipped}", status_code=303)

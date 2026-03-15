@@ -4,6 +4,7 @@ from mnemos.config import settings
 from mnemos.oauth import MnemosOAuthProvider
 from mnemos.tools import (
     delete,
+    get_memory,
     health,
     list_memories,
     recall,
@@ -29,6 +30,7 @@ mcp: FastMCP = FastMCP("Mnemos", auth=_build_auth())
 mcp.mount(store)
 mcp.mount(retrieve)
 mcp.mount(recall)
+mcp.mount(get_memory)
 mcp.mount(list_memories)
 mcp.mount(search_by_tag)
 mcp.mount(delete)

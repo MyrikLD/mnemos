@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mnemos.embeddings import embed
 from mnemos.models import Memory, MemoryTag, Tag
+from mnemos.schemas import MemoryListItem
 
 _UNSET = object()
 
@@ -130,12 +131,36 @@ class MemoryDao:
 
     async def delete(self, id: int) -> None:
         await self._vec_delete(id)
-        row = await self._s.execute(
+        result = await self._s.scalar(
             delete(Memory).where(Memory.id == id).returning(Memory.id)
         )
-        if row.scalar_one_or_none() is None:
+        if result is None:
             raise ValueError(f"Memory with id={id} not found")
         await self._cleanup_orphan_tags()
+
+    async def get(self, id: int) -> MemoryListItem | None:
+        row = (
+            await self._s.execute(
+                select(
+                    Memory.id,
+                    Memory.content,
+                    Memory.memory_type,
+                    Memory.extra_data,
+                    Memory.created_at,
+                ).where(Memory.id == id)
+            )
+        ).one_or_none()
+        if row is None:
+            return None
+        tags = (await self.fetch_tags([id])).get(id, [])
+        return MemoryListItem(
+            id=row.id,
+            content=row.content,
+            memory_type=row.memory_type,  # type: ignore[arg-type]
+            metadata=row.extra_data,
+            tags=tags,
+            created_at=str(row.created_at),
+        )
 
     async def fetch_tags(self, memory_ids: list[int]) -> dict[int, list[str]]:
         rows = await self._s.execute(

@@ -4,7 +4,24 @@
 
 <div class="page-header">
     <h1 class="page-title">Memories</h1>
+    <div style="display:flex;gap:.5rem;align-items:center">
+        <a href="/ui/export" class="btn btn-ghost btn-sm">Export JSON</a>
+        <form method="post" action="/ui/import" enctype="multipart/form-data" style="display:inline">
+            <label class="btn btn-ghost btn-sm" style="cursor:pointer">
+                Import JSON
+                <input type="file" name="file" accept=".json,application/json"
+                       style="display:none" onchange="this.form.submit()">
+            </label>
+        </form>
+    </div>
 </div>
+
+{% if request.query_params.get('imported') %}
+<div class="info-bar" style="background:var(--bg-2);border-radius:6px;padding:.5rem 1rem;margin-bottom:1rem">
+    Imported {{ request.query_params.get('imported') }},
+    skipped {{ request.query_params.get('skipped') }} memories.
+</div>
+{% endif %}
 
 <form method="get" class="toolbar">
     <input class="filter-input" name="memory_type" placeholder="Filter by type…"
