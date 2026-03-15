@@ -1,5 +1,5 @@
-from sqlalchemy import delete, insert, select, text, update
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy import delete, insert, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mnemos.embeddings import embed
@@ -13,38 +13,17 @@ class MemoryDao:
     def __init__(self, s: AsyncSession) -> None:
         self._s = s
 
-    async def _vec_insert(self, memory_id: int, content: str) -> None:
-        vector = embed(content)
-        vec_str = "[" + ",".join(str(v) for v in vector) + "]"
-        await self._s.execute(
-            text("INSERT INTO memories_vec(memory_id, embedding) VALUES (:id, :vec)"),
-            {"id": memory_id, "vec": vec_str},
-        )
-
-    async def _vec_update(self, memory_id: int, content: str) -> None:
-        vector = embed(content)
-        vec_str = "[" + ",".join(str(v) for v in vector) + "]"
-        await self._s.execute(
-            text("UPDATE memories_vec SET embedding = :vec WHERE memory_id = :id"),
-            {"vec": vec_str, "id": memory_id},
-        )
-
-    async def _vec_delete(self, memory_id: int) -> None:
-        await self._s.execute(
-            text("DELETE FROM memories_vec WHERE memory_id = :id"), {"id": memory_id}
-        )
-
     async def _upsert_tags(self, memory_id: int, tags: list[str]) -> None:
         for tag_name in tags:
             normalized = tag_name.lower().strip()
             if not normalized:
                 continue
             await self._s.execute(
-                sqlite_insert(Tag).values(name=normalized).on_conflict_do_nothing()
+                pg_insert(Tag).values(name=normalized).on_conflict_do_nothing()
             )
             tag_id = await self._s.scalar(select(Tag.id).where(Tag.name == normalized))
             await self._s.execute(
-                sqlite_insert(MemoryTag)
+                pg_insert(MemoryTag)
                 .values(memory_id=memory_id, tag_id=tag_id)
                 .on_conflict_do_nothing()
             )
@@ -79,12 +58,12 @@ class MemoryDao:
                     content=content,
                     memory_type=memory_type,
                     extra_data=metadata,
+                    embedding=embed(content),
                 )
                 .returning(Memory.id, Memory.created_at)
             )
         ).one()
 
-        await self._vec_insert(memory_id, content)
         await self._upsert_tags(memory_id, tags or [])
         return memory_id, str(created_at), True
 
@@ -109,6 +88,7 @@ class MemoryDao:
         values: dict = {}
         if content is not _UNSET:
             values["content"] = content
+            values["embedding"] = embed(content)
         if memory_type is not _UNSET:
             values["memory_type"] = memory_type
         if metadata is not _UNSET:
@@ -119,16 +99,12 @@ class MemoryDao:
                 update(Memory).where(Memory.id == memory_id).values(**values)
             )
 
-        if content is not _UNSET:
-            await self._vec_update(memory_id, content)  # type: ignore[arg-type]
-
         if tags is not _UNSET:
             await self._replace_tags(memory_id, tags)  # type: ignore[arg-type]
 
         return memory_id, str(created_at)
 
     async def delete(self, id: int) -> None:
-        await self._vec_delete(id)
         result = await self._s.scalar(
             delete(Memory).where(Memory.id == id).returning(Memory.id)
         )
