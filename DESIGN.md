@@ -36,7 +36,7 @@ src/mnemos/
 ├── main.py                # entrypoint: FastAPI app + uvicorn
 ├── server.py              # FastMCP("Mnemos") + mcp.mount() per tool
 ├── config.py              # pydantic-settings (MNEMOS_* prefix)
-├── db.py                  # async SQLAlchemy engine + sqlite-vec loader + SessionDep
+├── db.py                  # async SQLAlchemy engine + sqlite-vec loader + MCPSessionDep/APISessionDep
 ├── embeddings.py          # ONNX session, tokenization, mean pooling, L2 norm
 ├── search.py              # hybrid BM25 + vector KNN + RRF fusion
 ├── oauth.py               # custom OAuthProvider (fastmcp.server.auth)
@@ -47,9 +47,11 @@ src/mnemos/
 │   ├── memory.py          # Memory table
 │   ├── tag.py             # Tag table
 │   ├── memory_tag.py      # MemoryTag M2M table
+│   ├── oauth_client.py    # OAuthClient table
 │   └── schema_version.py  # SchemaVersion table
 ├── schemas/
 │   ├── __init__.py        # re-exports only
+│   ├── memory_type.py     # MemoryType StrEnum
 │   ├── search.py          # SearchResult, MemoryResult
 │   ├── store.py           # StoreResult
 │   ├── recall.py          # RecallResult
@@ -57,6 +59,9 @@ src/mnemos/
 │   ├── delete.py          # DeleteResult
 │   ├── update.py          # UpdateMemoryRequest
 │   └── health.py          # HealthResult
+├── dao/
+│   ├── __init__.py        # re-exports MemoryDao
+│   └── memory.py          # MemoryDao — DB access layer for memories
 ├── templates/             # Jinja2 templates (base, index, search, memory)
 ├── onnx/
 │   ├── model.onnx         # all-MiniLM-L6-v2 (excluded from git, see scripts/)
@@ -67,6 +72,7 @@ src/mnemos/
     ├── retrieve.py        # retrieve_memory → list[MemoryResult]
     ├── recall.py          # recall_memory → list[RecallResult]
     ├── list_memories.py   # list_memories → MemoryPage
+    ├── get_memory.py      # get_memory → MemoryListItem
     ├── search_by_tag.py   # search_by_tag → list[MemoryListItem]
     ├── delete.py          # delete_memory → DeleteResult
     └── health.py          # check_database_health → HealthResult
@@ -113,7 +119,9 @@ Model files: `src/mnemos/onnx/model.onnx`, `src/mnemos/onnx/tokenizer.json` — 
 
 ## Database Schema
 
-**memories** — main table: `id` (PK, stable public identifier), `content` (UNIQUE — idempotency), `memory_type`, `metadata` (JSON), `client_hostname`, `created_at`
+**oauth_clients** — OAuth client registrations: `client_id` (PK), `data` (JSON — full client metadata), `created_at`
+
+**memories** — main table: `id` (PK, stable public identifier), `content` (UNIQUE — idempotency), `memory_type`, `metadata` (JSON), `created_at`
 
 **memories_fts** — FTS5 virtual table, kept in sync with `memories` via triggers (INSERT/UPDATE/DELETE). Tokenizer: `porter unicode61`. Used for BM25 search.
 
@@ -145,6 +153,7 @@ Model files: `src/mnemos/onnx/model.onnx`, `src/mnemos/onnx/tokenizer.json` — 
 | `recall_memory`   | ✅   | ✅     | ✅ (+ date filter)             |
 | `search_by_tag`   | —    | —      | — (tag filter only)           |
 | `list_memories`   | —    | —      | — (date sort only)            |
+| `get_memory`      | —    | —      | — (ID lookup only)            |
 
 ---
 
@@ -157,10 +166,11 @@ Save a new memory entry.
 | Field             | Type     | Required | Description                             |
 |-------------------|----------|----------|-----------------------------------------|
 | `content`         | string   | ✅        | Memory text                             |
-| `memory_type`     | string   | ❌        | Type: `note`, `reminder`, `fact`, etc.  |
+| `memory_type`     | string   | ❌        | Type: see `MemoryType` enum below       |
 | `tags`            | string[] | ❌        | Tags                                    |
 | `metadata`        | object   | ❌        | Arbitrary metadata (JSON)               |
-| `client_hostname` | string   | ❌        | Client hostname for tracking            |
+
+**MemoryType enum:** `observation`, `feedback`, `fact`, `preference`, `instruction`, `task`, `plan`
 
 **Logic:** UNIQUE on `content` → idempotent (if content already exists, return existing) → INSERT RETURNING → embedding → `memories_vec` (raw SQL, vec0 has no triggers) → tags via `sqlite_insert(...).on_conflict_do_nothing()` → FTS5 via trigger.
 
@@ -228,6 +238,18 @@ Tag search with boolean logic.
 **Logic:** `AND` — all tags present; `OR` — at least one.
 
 **Returns:** `list[MemoryListItem]` — `id`, `content`, `memory_type`, `tags`, `created_at`.
+
+---
+
+### `get_memory`
+
+Fetch a single memory by ID with full details.
+
+| Field | Type    | Description |
+|-------|---------|-------------|
+| `id`  | integer | Entry ID    |
+
+**Returns:** `MemoryListItem` — `id`, `content`, `memory_type`, `tags`, `metadata`, `created_at`.
 
 ---
 
@@ -310,7 +332,8 @@ Web interface over the same database. Stack: FastAPI + Jinja2 (server-side rende
 
 - Each tool file has its own `mcp = FastMCP()`, tool registered via `@mcp.tool`
 - `server.py` mounts all sub-servers via `mcp.mount()`
-- Sessions: `SessionDep = Depends(session_dep)` from `fastmcp.dependencies`; parameter typed as `s: AsyncSession = SessionDep  # type: ignore[assignment]`
+- Sessions: `MCPSessionDep` (for MCP tools) and `APISessionDep` (for FastAPI routes) from `mnemos.db`; parameter typed as `s: AsyncSession = MCPSessionDep  # type: ignore[assignment]`
+- DB access via `MemoryDao(s)` from `mnemos.dao` — tool files do not execute queries directly
 - Commit/rollback managed by `session_dep` — never call manually
 - `output_schema=Model.model_json_schema()` — only for tools returning an object; list-returning tools use bare `@mcp.tool` (MCP spec does not allow array as output_schema)
 - SQLAlchemy Core: `select()`, `insert()`, `delete()`, `update()`. `sa.text()` only for sqlite-specific syntax (vec0, FTS5). `.mappings().all()` for multi-column results

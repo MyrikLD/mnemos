@@ -290,7 +290,6 @@ async def import_memories_ui(s: APISessionDep, file: UploadFile = File()) -> Res
             content=item["content"],
             memory_type=item.get("memory_type"),
             metadata=item.get("metadata"),
-            client_hostname=None,
             tags=item.get("tags") or [],
         )
         if created:

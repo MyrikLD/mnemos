@@ -11,7 +11,6 @@ async def test_crud(session):
         content="hello world",
         memory_type="observation",
         metadata={"k": "v"},
-        client_hostname=None,
         tags=["foo", "bar"],
     )
     assert created is True
@@ -22,7 +21,6 @@ async def test_crud(session):
         content="hello world",
         memory_type=None,
         metadata=None,
-        client_hostname=None,
         tags=[],
     )
     assert created2 is False

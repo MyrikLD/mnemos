@@ -17,7 +17,6 @@ async def store_memory(
     memory_type: MemoryType | None = None,
     tags: list[str] | None = None,
     metadata: dict | None = None,
-    client_hostname: str | None = None,
     s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]
 ) -> StoreResult:
     """Save a new memory. Idempotent: returns existing if content already stored."""
@@ -26,7 +25,6 @@ async def store_memory(
         content=content,
         memory_type=memory_type,
         metadata=metadata,
-        client_hostname=client_hostname,
         tags=tags,
     )
     return StoreResult(id=memory_id, created_at=created_at, created=created)

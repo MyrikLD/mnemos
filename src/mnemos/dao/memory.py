@@ -62,7 +62,6 @@ class MemoryDao:
         content: str,
         memory_type: str | None,
         metadata: dict | None,
-        client_hostname: str | None,
         tags: list[str] | None,
     ) -> tuple[int, str, bool]:
         row = await self._s.execute(
@@ -80,7 +79,6 @@ class MemoryDao:
                     content=content,
                     memory_type=memory_type,
                     extra_data=metadata,
-                    client_hostname=client_hostname,
                 )
                 .returning(Memory.id, Memory.created_at)
             )
