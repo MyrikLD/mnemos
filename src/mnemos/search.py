@@ -36,7 +36,7 @@ async def hybrid_search(
         conditions.append(Memory.memory_type == memory_type)
 
     # BM25 via PostgreSQL FTS
-    tsquery = func.websearch_to_tsquery("english", query)
+    tsquery = func.websearch_to_tsquery("simple", query)
     ts_rank_expr = func.ts_rank(Memory.search_vector, tsquery)
     bm25_rank = func.row_number().over(order_by=ts_rank_expr.desc()).label("bm25_rank")
 
