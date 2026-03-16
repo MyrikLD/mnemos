@@ -105,26 +105,26 @@ class MemoryDao:
 
     async def get(self, id: int) -> MemoryListItem | None:
         row = (
-            await self._s.execute(
-                select(
-                    Memory.id,
-                    Memory.content,
-                    Memory.memory_type,
-                    Memory.extra_data,
-                    Memory.created_at,
-                ).where(Memory.id == id)
+            (
+                await self._s.execute(
+                    select(
+                        Memory.id,
+                        Memory.content,
+                        Memory.memory_type,
+                        Memory.extra_data.label("metadata"),
+                        Memory.created_at,
+                    ).where(Memory.id == id)
+                )
             )
-        ).one_or_none()
+            .mappings()
+            .one_or_none()
+        )
         if row is None:
             return None
         tags = (await self.fetch_tags([id])).get(id, [])
         return MemoryListItem(
-            id=row.id,
-            content=row.content,
-            memory_type=row.memory_type,  # type: ignore[arg-type]
-            metadata=row.extra_data,
+            **row,
             tags=tags,
-            created_at=str(row.created_at),
         )
 
     async def fetch_tags(self, memory_ids: list[int]) -> dict[int, list[str]]:

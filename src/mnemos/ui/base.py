@@ -14,9 +14,10 @@ from sqlalchemy import select
 from mnemos.dao import MemoryDao
 from mnemos.db import APISessionDep
 from mnemos.models import Memory, MemoryTag, Tag
-from mnemos.schemas import UpdateMemoryRequest
+from mnemos.schemas import MemoryType, UpdateMemoryRequest
 from mnemos.search import hybrid_search
 from mnemos.ui.utils import require_auth, templates
+from mnemos.utils.dt import utcnow
 
 router = APIRouter()
 
@@ -35,7 +36,7 @@ async def index(
     s: APISessionDep,
     page: int = 1,
     page_size: int = 20,
-    memory_type: str = "",
+    memory_type: str | None = None,
     tag: str = "",
 ) -> HTMLResponse:
     page_size = min(page_size, 100)
@@ -43,7 +44,7 @@ async def index(
 
     q = select(*_COLS)
     if memory_type:
-        q = q.where(Memory.memory_type == memory_type)
+        q = q.where(Memory.memory_type == MemoryType(memory_type))
     if tag:
         tag_subq = (
             select(MemoryTag.memory_id)
@@ -68,11 +69,8 @@ async def index(
 
     memories = [
         {
-            "id": row["id"],
-            "content": row["content"],
-            "memory_type": row["memory_type"],
+            **row,
             "tags": tags_map.get(row["id"], []),
-            "created_at": str(row["created_at"]),
         }
         for row in rows
     ]
@@ -103,14 +101,13 @@ async def search(request: Request, s: APISessionDep, q: str = "") -> HTMLRespons
             dao = MemoryDao(s)
             ids = [r.id for r in raw]
             tags_map = await dao.fetch_tags(ids)
-            created_map = {
-                row.id: row.created_at
-                for row in (
+            created_map = dict(
+                (
                     await s.execute(
                         select(Memory.id, Memory.created_at).where(Memory.id.in_(ids))
                     )
                 ).all()
-            }
+            )
             for r in raw:
                 results.append(
                     {
@@ -118,7 +115,7 @@ async def search(request: Request, s: APISessionDep, q: str = "") -> HTMLRespons
                         "content": r.content,
                         "memory_type": r.memory_type,
                         "tags": tags_map.get(r.id, []),
-                        "created_at": str(created_map.get(r.id, "")),
+                        "created_at": created_map.get(r.id, utcnow()),
                         "rrf_score": round(r.rrf_score, 4),
                     }
                 )

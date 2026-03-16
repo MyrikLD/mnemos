@@ -70,9 +70,9 @@ async def search_by_tag(
             id=row["id"],
             content=row["content"],
             memory_type=row["memory_type"],
-            metadata=row["extra_data"],
+            extra_data=row["extra_data"],
             tags=tags_map.get(row["id"], []),
-            created_at=str(row["created_at"]),
+            created_at=row["created_at"],
         )
         for row in rows
     ]

@@ -16,6 +16,6 @@ class MemoryResult(BaseModel):
     content: str
     memory_type: MemoryType
     tags: list[str]
-    metadata: dict | None
-    created_at: str | None
+    metadata: dict
+    created_at: str
     rrf_score: float

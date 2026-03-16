@@ -32,7 +32,7 @@ async def export_memories_ui(s: APISessionDep) -> Response:
                     Memory.content,
                     Memory.memory_type,
                     Memory.created_at,
-                    Memory.extra_data,
+                    Memory.extra_data.label("metadata"),
                 ).order_by(Memory.created_at)
             )
         )
@@ -43,11 +43,8 @@ async def export_memories_ui(s: APISessionDep) -> Response:
     tags_map = await MemoryDao(s).fetch_tags(ids) if ids else {}
     data = [
         ImportItem(
-            content=r["content"],
-            memory_type=r["memory_type"],
+            **r,
             tags=tags_map.get(r["id"], []),
-            metadata=r["extra_data"],
-            created_at=str(r["created_at"]),
         ).model_dump(mode="json")
         for r in rows
     ]

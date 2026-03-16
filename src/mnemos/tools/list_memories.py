@@ -2,12 +2,13 @@ import math
 
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from mnemos.dao import MemoryDao
 from mnemos.db import MCPSessionDep
 from mnemos.models import Memory, MemoryTag, Tag
 from mnemos.schemas import MemoryListItem, MemoryPage, MemoryType
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 mcp = FastMCP()
 
@@ -15,7 +16,7 @@ _COLS = (
     Memory.id,
     Memory.content,
     Memory.memory_type,
-    Memory.extra_data,
+    Memory.extra_data.label("metadata"),
     Memory.created_at,
 )
 
@@ -77,12 +78,8 @@ async def list_memories(
     return MemoryPage(
         items=[
             MemoryListItem(
-                id=row["id"],
-                content=row["content"],
-                memory_type=row["memory_type"],
-                metadata=row["extra_data"],
+                **row,
                 tags=tags_map.get(row["id"], []),
-                created_at=str(row["created_at"]),
             )
             for row in rows
         ],

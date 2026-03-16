@@ -25,7 +25,7 @@ dev = [
     "alembic-autogen-check",
     "black",
     "httpx",
-    "pytest",
+    "pytest==9.*",
     "pytest-asyncio",
     "pytest-cov",
     "pytest-mock",

@@ -15,8 +15,8 @@ async def hybrid_search(
     query: str,
     limit: int | None = None,
     similarity_threshold: float | None = None,
-    date_from: str | None = None,
-    date_to: str | None = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
     memory_type: str | None = None,
 ) -> list[SearchResult]:
     n = (limit or settings.default_limit) * 4
@@ -29,9 +29,9 @@ async def hybrid_search(
 
     conditions = []
     if date_from:
-        conditions.append(Memory.created_at >= datetime.fromisoformat(date_from))
+        conditions.append(Memory.created_at >= date_from)
     if date_to:
-        conditions.append(Memory.created_at <= datetime.fromisoformat(date_to))
+        conditions.append(Memory.created_at <= date_to)
     if memory_type:
         conditions.append(Memory.memory_type == memory_type)
 

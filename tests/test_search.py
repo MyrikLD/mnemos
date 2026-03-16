@@ -85,7 +85,7 @@ async def test_date_filter_today(session):
         session,
         "something",
         similarity_threshold=0.0,
-        date_from=today_start.isoformat(sep=" "),
+        date_from=today_start,
     )
     ids = [r.id for r in results]
     assert mid2 in ids
@@ -104,8 +104,8 @@ async def test_date_filter_includes_today(session):
         session,
         "python programming",
         similarity_threshold=0.0,
-        date_from=today_midnight.isoformat(sep=" "),
-        date_to=date_to.isoformat(sep=" "),
+        date_from=today_midnight,
+        date_to=date_to,
     )
     assert any(r.id == mid for r in results)
 

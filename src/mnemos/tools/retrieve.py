@@ -1,10 +1,12 @@
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from mnemos.dao import MemoryDao
 from mnemos.db import MCPSessionDep
 from mnemos.schemas import MemoryResult, MemoryType
 from mnemos.search import hybrid_search
-from sqlalchemy.ext.asyncio import AsyncSession
+from mnemos.utils.dt import utcnow
 
 mcp = FastMCP()
 
@@ -36,7 +38,7 @@ async def retrieve_memory(
 
     output = []
     for r in results:
-        metadata, created_at = meta_map.get(r.id, (None, None))
+        metadata, created_at = meta_map.get(r.id, ({}, utcnow()))
         output.append(
             MemoryResult(
                 id=r.id,
@@ -44,7 +46,7 @@ async def retrieve_memory(
                 memory_type=r.memory_type,
                 tags=tags_map.get(r.id, []),
                 metadata=metadata,
-                created_at=str(created_at) if created_at else None,
+                created_at=created_at,
                 rrf_score=r.rrf_score,
             )
         )

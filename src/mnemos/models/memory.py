@@ -11,8 +11,10 @@ class Memory(Base):
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     content = sa.Column(sa.Text, unique=True, nullable=False)
     memory_type = sa.Column(sa.String(50), nullable=False)
-    extra_data = sa.Column("metadata", sa.JSON, nullable=True)
-    created_at = sa.Column(sa.DateTime, server_default=sa.func.now(), nullable=False)
+    extra_data = sa.Column("metadata", sa.JSON, nullable=False, server_default="{}")
+    created_at = sa.Column(
+        sa.DateTime(timezone=False), server_default=sa.func.now(), nullable=False
+    )
     embedding = sa.Column(Vector(384), nullable=True)
     search_vector = sa.Column(
         TSVECTOR,

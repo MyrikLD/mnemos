@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from datetime import datetime
+
+from pydantic import BaseModel, Field
 
 from .memory_type import MemoryType
 
@@ -6,10 +8,10 @@ from .memory_type import MemoryType
 class MemoryListItem(BaseModel):
     id: int
     content: str
-    memory_type: MemoryType | None
-    metadata: dict | None
+    memory_type: MemoryType
+    metadata: dict = Field(default_factory=dict)
     tags: list[str]
-    created_at: str
+    created_at: datetime
 
 
 class MemoryPage(BaseModel):

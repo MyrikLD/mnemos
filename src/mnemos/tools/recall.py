@@ -3,13 +3,14 @@ from datetime import datetime, timezone
 from dateparser.search import search_dates  # type: ignore[import-untyped]
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from mnemos.dao import MemoryDao
 from mnemos.db import MCPSessionDep
 from mnemos.models import Memory
 from mnemos.schemas import MemoryType, RecallResult
 from mnemos.search import hybrid_search
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 mcp = FastMCP()
 
@@ -25,8 +26,8 @@ async def recall_memory(
 
     Examples: "last week", "yesterday", "about Python last month".
     """
-    date_from: str | None = None
-    date_to: str | None = None
+    date_from: datetime | None = None
+    date_to: datetime | None = None
     semantic_query = query
 
     found = search_dates(
@@ -37,12 +38,8 @@ async def recall_memory(
         dts = [dt for _, dt in found]
         # Truncate to start of day: dateparser returns "now" time for expressions like
         # "today"/"yesterday"/"last week", making the window near-zero otherwise.
-        date_from = (
-            min(dts)
-            .replace(hour=0, minute=0, second=0, microsecond=0)
-            .isoformat(sep=" ")
-        )
-        date_to = datetime.now(timezone.utc).replace(tzinfo=None).isoformat(sep=" ")
+        date_from = min(dts).replace(hour=0, minute=0, second=0, microsecond=0)
+        date_to = datetime.now(timezone.utc).replace(tzinfo=None)
 
         remaining = query
         for date_str, _ in found:
