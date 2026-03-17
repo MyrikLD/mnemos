@@ -12,11 +12,12 @@ router = APIRouter()
 
 @router.get("/login", response_class=HTMLResponse)
 async def login_get(
-        request: Request, next: str = "/", invite: str = ""
+    request: Request, next: str = "/", invite: str = ""
 ) -> HTMLResponse:
     return templates.TemplateResponse(
         request, "login.html", {"next": next, "invite": invite}
     )
+
 
 @router.post("/login")
 async def login_post(
