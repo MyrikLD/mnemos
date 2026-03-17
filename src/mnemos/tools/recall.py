@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mnemos.dao import MemoryDao
-from mnemos.db import MCPSessionDep
+from mnemos.db import MCPWorkspaceSessionDep
 from mnemos.models import Memory
 from mnemos.schemas import MemoryType, RecallResult
 from mnemos.search import hybrid_search
@@ -20,12 +20,15 @@ async def recall_memory(
     query: str,
     n_results: int = 5,
     memory_type: MemoryType | None = None,
-    s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]
+    ctx: tuple = MCPWorkspaceSessionDep,  # type: ignore[assignment]
 ) -> list[RecallResult]:
     """Search memories by time expression + semantics.
 
     Examples: "last week", "yesterday", "about Python last month".
     """
+    s: AsyncSession
+    s, workspace_id, workspace_ids = ctx
+
     date_from: datetime | None = None
     date_to: datetime | None = None
     semantic_query = query
@@ -54,13 +57,15 @@ async def recall_memory(
         date_from=date_from,
         date_to=date_to,
         memory_type=memory_type,
+        workspace_id=workspace_id,
+        workspace_ids=workspace_ids,
     )
 
     if not results:
         return []
 
     ids = [r.id for r in results]
-    tags_map = await MemoryDao(s).fetch_tags(ids)
+    tags_map = await MemoryDao(s, workspace_id, workspace_ids).fetch_tags(ids)
 
     rows = await s.execute(
         select(Memory.id, Memory.created_at).where(Memory.id.in_(ids))
@@ -73,7 +78,7 @@ async def recall_memory(
             content=r.content,
             memory_type=r.memory_type,
             tags=tags_map.get(r.id, []),
-            created_at=str(created_map.get(r.id, "")),
+            created_at=created_map.get(r.id),
         )
         for r in results
     ]

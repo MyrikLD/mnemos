@@ -24,12 +24,18 @@ MCP_PATH = "/mcp"
 RESOURCE_URL = f"{BASE_URL}{MCP_PATH}"
 
 
+async def _dummy_db_lookup(username: str, password: str) -> tuple[int, int] | None:
+    if username == "testuser" and password == "hunter2":
+        return (1, 1)
+    return None
+
+
 @pytest.fixture
 def provider():
     return MnemosOAuthProvider(
         base_url=BASE_URL,
         jwt_secret="test-only-secret",
-        password="hunter2",
+        db_lookup=_dummy_db_lookup,
     )
 
 

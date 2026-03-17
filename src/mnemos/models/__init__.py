@@ -3,3 +3,7 @@ from .memory_tag import MemoryTag
 from .oauth_client import OAuthClient
 from .schema_version import SchemaVersion
 from .tag import Tag
+from .user import User
+from .workspace import Workspace
+from .workspace_invite import WorkspaceInvite
+from .workspace_member import WorkspaceMember

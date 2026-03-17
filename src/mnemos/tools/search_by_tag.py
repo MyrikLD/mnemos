@@ -3,7 +3,7 @@ from typing import Literal
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from mnemos.dao import MemoryDao
-from mnemos.db import MCPSessionDep
+from mnemos.db import MCPWorkspaceSessionDep
 from mnemos.models import Memory, MemoryTag, Tag
 from mnemos.schemas import MemoryListItem
 from sqlalchemy import func, select
@@ -15,7 +15,7 @@ _COLS = (
     Memory.id,
     Memory.content,
     Memory.memory_type,
-    Memory.extra_data,
+    Memory.extra_data.label("metadata"),
     Memory.created_at,
 )
 
@@ -24,15 +24,24 @@ _COLS = (
 async def search_by_tag(
     tags: list[str],
     operation: Literal["AND", "OR"] = "AND",
-    s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]
+    ctx: tuple = MCPWorkspaceSessionDep,  # type: ignore[assignment]
 ) -> list[MemoryListItem]:
     """Search memories by tags. AND: all tags present. OR: any tag present."""
+    s: AsyncSession
+    s, workspace_id, workspace_ids = ctx
+
     if not tags:
         return []
 
     normalized = [t.lower().strip() for t in tags if t.strip()]
     if not normalized:
         return []
+
+    ws_conditions = []
+    if workspace_ids:
+        ws_conditions.append(Memory.workspace_id.in_(workspace_ids))
+    elif workspace_id is not None:
+        ws_conditions.append(Memory.workspace_id == workspace_id)
 
     if operation == "AND":
         matching_count = (
@@ -45,7 +54,7 @@ async def search_by_tag(
         )
         stmt = (
             select(*_COLS)
-            .where(matching_count == len(normalized))
+            .where(matching_count == len(normalized), *ws_conditions)
             .order_by(Memory.created_at.desc())
         )
     else:
@@ -53,7 +62,7 @@ async def search_by_tag(
             select(*_COLS)
             .join(MemoryTag, Memory.id == MemoryTag.memory_id)
             .join(Tag, MemoryTag.tag_id == Tag.id)
-            .where(Tag.name.in_(normalized))
+            .where(Tag.name.in_(normalized), *ws_conditions)
             .distinct()
             .order_by(Memory.created_at.desc())
         )
@@ -63,14 +72,14 @@ async def search_by_tag(
         return []
 
     ids: list[int] = [row["id"] for row in rows]
-    tags_map = await MemoryDao(s).fetch_tags(ids)
+    tags_map = await MemoryDao(s, workspace_id, workspace_ids).fetch_tags(ids)
 
     return [
         MemoryListItem(
             id=row["id"],
             content=row["content"],
             memory_type=row["memory_type"],
-            extra_data=row["extra_data"],
+            metadata=row["metadata"],
             tags=tags_map.get(row["id"], []),
             created_at=row["created_at"],
         )

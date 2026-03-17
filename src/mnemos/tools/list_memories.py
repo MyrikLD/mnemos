@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mnemos.dao import MemoryDao
-from mnemos.db import MCPSessionDep
+from mnemos.db import MCPWorkspaceSessionDep
 from mnemos.models import Memory, MemoryTag, Tag
 from mnemos.schemas import MemoryListItem, MemoryPage, MemoryType
 
@@ -30,13 +30,20 @@ async def list_memories(
     page_size: int = 10,
     memory_type: MemoryType | None = None,
     tag: str | None = None,
-    s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]
+    ctx: tuple = MCPWorkspaceSessionDep,  # type: ignore[assignment]
 ) -> MemoryPage:
     """Paginated list of memories with optional type/tag filters."""
+    s: AsyncSession
+    s, workspace_id, workspace_ids = ctx
+
     page_size = min(page_size, 100)
     offset = (page - 1) * page_size
 
     q = select(*_COLS)
+    if workspace_ids:
+        q = q.where(Memory.workspace_id.in_(workspace_ids))
+    elif workspace_id is not None:
+        q = q.where(Memory.workspace_id == workspace_id)
 
     if memory_type:
         q = q.where(Memory.memory_type == memory_type)
@@ -73,7 +80,7 @@ async def list_memories(
         )
 
     ids: list[int] = [row["id"] for row in rows]
-    tags_map = await MemoryDao(s).fetch_tags(ids)
+    tags_map = await MemoryDao(s, workspace_id, workspace_ids).fetch_tags(ids)
 
     return MemoryPage(
         items=[

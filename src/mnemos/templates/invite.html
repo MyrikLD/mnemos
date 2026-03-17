@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mnemos — Workspace Invite</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] } } } }</script>
+</head>
+<body class="bg-gray-50 font-sans antialiased min-h-screen flex items-center justify-center p-6">
+
+<div class="w-full max-w-[420px] text-center">
+    <span class="w-14 h-14 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl mx-auto mb-6">M</span>
+
+    {% if error %}
+    <h1 class="text-xl font-bold text-gray-900 tracking-tight mb-3">Invalid invite</h1>
+    <div class="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-[13px] rounded-xl mb-6 text-left">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        {{ error }}
+    </div>
+    <a href="/" class="inline-flex items-center px-5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-[14px] font-medium rounded-xl transition-colors" style="text-decoration:none">
+        Go home
+    </a>
+    {% else %}
+    <h1 class="text-xl font-bold text-gray-900 tracking-tight mb-2">You've been invited!</h1>
+    <p class="text-[15px] text-gray-500 mb-8 leading-relaxed">
+        You've been invited to join the workspace
+        <strong class="text-gray-700">{{ workspace_name }}</strong> on Mnemos.
+        Register or sign in to accept.
+    </p>
+    <div class="flex items-center justify-center gap-3 flex-wrap">
+        <a href="/ui/register?invite={{ token }}"
+           class="inline-flex items-center px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white text-[14px] font-medium rounded-xl transition-colors" style="text-decoration:none">
+            Create account
+        </a>
+        <a href="/ui/login?invite={{ token }}"
+           class="inline-flex items-center px-5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-[14px] font-medium rounded-xl transition-colors" style="text-decoration:none">
+            Sign in
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+</body>
+</html>

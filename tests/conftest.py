@@ -2,6 +2,7 @@ import asyncio
 
 import pytest
 import pytest_asyncio
+import sqlalchemy as sa
 from sqlalchemy import text
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -53,3 +54,25 @@ async def session(test_db_url):
         async with AsyncSession(bind=conn, expire_on_commit=False) as s:
             yield s
     await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def workspace_id(session):
+    """Create a test user + workspace and return the workspace_id."""
+    from mnemos.dao.user import UserDao
+
+    dao = UserDao(session)
+    try:
+        _, ws_id = await dao.create_user_with_workspace("_test_default", "testpassword")
+    except ValueError:
+        # Already exists (e.g., in parallel runs) - look it up
+        from mnemos.models.workspace import Workspace
+        from mnemos.models.user import User
+
+        ws_id = await session.scalar(
+            sa.select(Workspace.id)
+            .join(User, Workspace.owner_id == User.id)
+            .where(User.username == "_test_default")
+            .limit(1)
+        )
+    return ws_id

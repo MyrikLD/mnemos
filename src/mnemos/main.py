@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
 from mnemos.config import settings
-from mnemos.server import mcp
+from mnemos.server import get_provider, mcp
 from mnemos.ui import router as ui_router
 
 mcp_app = mcp.http_app(path="/mcp")
@@ -21,6 +21,13 @@ app.include_router(ui_router)
 # Mount mcp_app at "/" so that OAuth /.well-known/* endpoints are at the root,
 # matching what MCP clients expect.  The MCP transport itself is at /mcp.
 app.mount("/", mcp_app)
+
+# Wire workspace middleware when OAuth is configured.
+provider = get_provider()
+if provider is not None:
+    from mnemos.middleware import WorkspaceMiddleware
+
+    app.add_middleware(WorkspaceMiddleware, provider=provider)
 
 
 def main() -> None:

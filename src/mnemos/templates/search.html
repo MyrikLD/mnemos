@@ -2,45 +2,63 @@
 {% block title %}Mnemos — Search{% endblock %}
 {% block content %}
 
-<div class="page-header">
-    <h1 class="page-title">
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-xl font-semibold text-gray-900 tracking-tight">
         {% if q %}Search results{% else %}Search{% endif %}
     </h1>
 </div>
 
 {% if q %}
-<p class="info-bar">
-    {{ results | length }} result{{ 's' if results | length != 1 else '' }}
-    for <strong>"{{ q }}"</strong>
+<p class="text-[13px] text-gray-400 mb-4">
+    <span class="text-gray-600 font-medium">{{ results | length }}</span>
+    result{{ 's' if results | length != 1 else '' }} for
+    <span class="text-gray-700 font-medium">"{{ q }}"</span>
 </p>
 
 {% for m in results %}
-<div class="card">
-    <div class="card-header">
-        <a href="/memory/{{ m.id }}" style="flex:1; min-width:0; color:inherit; text-decoration:none;">
-            <div class="card-content">{{ m.content | truncate(280) }}</div>
+<div class="bg-white border border-gray-200 rounded-xl px-5 py-4 mb-2 shadow-sm hover:border-indigo-200 hover:shadow transition-all">
+    <div class="flex items-start justify-between gap-3">
+        <a href="/memory/{{ m.id }}" class="flex-1 min-w-0" style="text-decoration:none">
+            <p class="text-[15px] text-gray-700 leading-relaxed whitespace-pre-wrap break-words hover:text-gray-900 transition-colors">{{ m.content | truncate(280) }}</p>
         </a>
-        <span class="score-badge">{{ m.rrf_score }}</span>
+        <span class="shrink-0 text-[11px] text-gray-400 tabular-nums font-mono pt-0.5">{{ m.rrf_score }}</span>
     </div>
-    <div class="card-meta">
-        {% if m.memory_type %}<span class="badge badge-type">{{ m.memory_type }}</span>{% endif %}
-        {% for t in m.tags %}<a href="/?tag={{ t }}" class="tag">#{{ t }}</a>{% endfor %}
-        <span class="card-date">{{ m.created_at.strftime('%Y-%m-%d %H:%M:%S') if m.created_at else '' }}</span>
+    <div class="flex items-center flex-wrap gap-1.5 mt-3">
+        {% if m.memory_type %}
+        <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full text-[11px] font-semibold uppercase tracking-wide">{{ m.memory_type }}</span>
+        {% endif %}
+        {% for t in m.tags %}
+        <a href="/?tag={{ t }}" class="px-2 py-0.5 bg-gray-100 text-gray-500 border border-gray-200 rounded-full text-[12px] font-medium hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition-colors" style="text-decoration:none">#{{ t }}</a>
+        {% endfor %}
+        <div class="ml-auto flex items-center gap-2 shrink-0">
+            {% if show_workspace_badge and m.workspace_name %}
+            {% set _p = [("#ede9fe","#7c3aed","#c4b5fd"),("#d1fae5","#059669","#6ee7b7"),("#fef3c7","#d97706","#fcd34d"),("#ffe4e6","#e11d48","#fda4af"),("#e0f2fe","#0284c7","#7dd3fc"),("#fce7f3","#db2777","#f9a8d4"),("#ffedd5","#ea580c","#fdba74"),("#ccfbf1","#0f766e","#5eead4")] %}
+            {% set _c = _p[(m.workspace_id or 0) % 8] %}
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border"
+                  style="background:{{ _c[0] }};color:{{ _c[1] }};border-color:{{ _c[2] }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                {{ m.workspace_name }}
+            </span>
+            {% endif %}
+            <span class="text-[11px] text-gray-400 tabular-nums font-mono">
+                {{ m.created_at.strftime('%Y-%m-%d %H:%M') if m.created_at else '' }}
+            </span>
+        </div>
     </div>
 </div>
 {% else %}
-<div class="empty-state">
-    <div class="empty-state-icon">🔍</div>
-    <div class="empty-state-title">No results found</div>
-    <div class="empty-state-desc">Try different keywords or a broader query.</div>
+<div class="text-center py-16 text-gray-400">
+    <div class="text-4xl mb-3 opacity-40">🔍</div>
+    <div class="text-base font-semibold text-gray-500 mb-1">No results found</div>
+    <div class="text-[14px]">Try different keywords or a broader query.</div>
 </div>
 {% endfor %}
 
 {% else %}
-<div class="empty-state">
-    <div class="empty-state-icon">🔍</div>
-    <div class="empty-state-title">Search your memories</div>
-    <div class="empty-state-desc">Enter a query above to search using hybrid BM25 + semantic search.</div>
+<div class="text-center py-16 text-gray-400">
+    <div class="text-4xl mb-3 opacity-40">🔍</div>
+    <div class="text-base font-semibold text-gray-500 mb-1">Search your memories</div>
+    <div class="text-[14px]">Enter a query above to use hybrid BM25 + semantic search.</div>
 </div>
 {% endif %}
 

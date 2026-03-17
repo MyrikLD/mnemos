@@ -3,7 +3,7 @@ from mcp.types import ToolAnnotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mnemos.dao import MemoryDao
-from mnemos.db import MCPSessionDep
+from mnemos.db import MCPWorkspaceSessionDep
 from mnemos.schemas import MemoryType, StoreResult
 
 mcp = FastMCP()
@@ -18,14 +18,16 @@ async def store_memory(
     memory_type: MemoryType,
     tags: list[str] | None = None,
     metadata: dict | None = None,
-    s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]
+    ctx: tuple = MCPWorkspaceSessionDep,  # type: ignore[assignment]
 ) -> StoreResult:
     """Save a new memory. Idempotent: returns existing if content already stored."""
-    dao = MemoryDao(s)
+    s: AsyncSession
+    s, workspace_id, _workspace_ids = ctx
+    dao = MemoryDao(s, workspace_id)
     memory_id, created = await dao.create(
         content=content,
         memory_type=memory_type,
-        metadata=metadata,
-        tags=tags,
+        metadata=metadata or {},
+        tags=tags or [],
     )
     return StoreResult(id=memory_id, created=created)

@@ -10,8 +10,8 @@ from mnemos.schemas import MemoryType
 from mnemos.search import hybrid_search
 
 
-async def _store(s: AsyncSession, content: str) -> int:
-    mid, new = await MemoryDao(s).create(
+async def _store(s: AsyncSession, content: str, workspace_id: int) -> int:
+    mid, new = await MemoryDao(s, workspace_id).create(
         content=content,
         memory_type=MemoryType.fact,
         metadata={},
@@ -20,63 +20,79 @@ async def _store(s: AsyncSession, content: str) -> int:
     return mid
 
 
-async def test_empty_db(session):
-    results = await hybrid_search(session, "anything", similarity_threshold=0.0)
+async def test_empty_db(session, workspace_id):
+    results = await hybrid_search(
+        session, "anything", similarity_threshold=0.0, workspace_id=workspace_id
+    )
     assert results == []
 
 
-async def test_bm25_match(session):
-    await _store(session, "Python is a programming language")
-    await _store(session, "SQLite is a database engine")
+async def test_bm25_match(session, workspace_id):
+    await _store(session, "Python is a programming language", workspace_id)
+    await _store(session, "SQLite is a database engine", workspace_id)
 
     results = await hybrid_search(
-        session, "Python programming", similarity_threshold=0.0
+        session,
+        "Python programming",
+        similarity_threshold=0.0,
+        workspace_id=workspace_id,
     )
     assert any("Python" in r.content for r in results)
 
 
-async def test_vector_semantic_match(session):
-    await _store(session, "I love cats and kittens")
-    await _store(session, "SQL database with indexes")
+async def test_vector_semantic_match(session, workspace_id):
+    await _store(session, "I love cats and kittens", workspace_id)
+    await _store(session, "SQL database with indexes", workspace_id)
 
-    results = await hybrid_search(session, "feline animals", similarity_threshold=0.0)
+    results = await hybrid_search(
+        session, "feline animals", similarity_threshold=0.0, workspace_id=workspace_id
+    )
     assert any("cats" in r.content for r in results)
 
 
-async def test_threshold_zero_includes_bm25_hit(session):
+async def test_threshold_zero_includes_bm25_hit(session, workspace_id):
     """Regression: threshold=0.0 must not filter BM25-only matches."""
-    await _store(session, "The quick brown fox jumps over the lazy dog")
+    await _store(session, "The quick brown fox jumps over the lazy dog", workspace_id)
 
-    results = await hybrid_search(session, "quick brown fox", similarity_threshold=0.0)
+    results = await hybrid_search(
+        session, "quick brown fox", similarity_threshold=0.0, workspace_id=workspace_id
+    )
     assert results
 
 
-async def test_high_threshold_filters_unrelated(session):
-    await _store(session, "Python is a programming language")
+async def test_high_threshold_filters_unrelated(session, workspace_id):
+    await _store(session, "Python is a programming language", workspace_id)
 
     results = await hybrid_search(
-        session, "quantum physics experiment", similarity_threshold=0.95
+        session,
+        "quantum physics experiment",
+        similarity_threshold=0.95,
+        workspace_id=workspace_id,
     )
     assert results == []
 
 
-async def test_limit(session):
+async def test_limit(session, workspace_id):
     for i in range(5):
-        await _store(session, f"memory about topic number {i}")
+        await _store(session, f"memory about topic number {i}", workspace_id)
 
     results = await hybrid_search(
-        session, "memory topic", limit=2, similarity_threshold=0.0
+        session,
+        "memory topic",
+        limit=2,
+        similarity_threshold=0.0,
+        workspace_id=workspace_id,
     )
     assert len(results) <= 2
 
 
-async def test_date_filter_today(session):
-    mid = await _store(session, "something stored today")
+async def test_date_filter_today(session, workspace_id):
+    mid = await _store(session, "something stored today", workspace_id)
     yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).replace(tzinfo=None)
     await session.execute(
         update(Memory).where(Memory.id == mid).values(created_at=yesterday)
     )
-    mid2 = await _store(session, "something stored recently")
+    mid2 = await _store(session, "something stored recently", workspace_id)
 
     today_start = datetime.now(timezone.utc).replace(
         hour=0, minute=0, second=0, microsecond=0, tzinfo=None
@@ -86,15 +102,16 @@ async def test_date_filter_today(session):
         "something",
         similarity_threshold=0.0,
         date_from=today_start,
+        workspace_id=workspace_id,
     )
     ids = [r.id for r in results]
     assert mid2 in ids
     assert mid not in ids
 
 
-async def test_date_filter_includes_today(session):
+async def test_date_filter_includes_today(session, workspace_id):
     """Regression: date_from = start-of-day must include memories created today."""
-    mid = await _store(session, "python programming language tutorial")
+    mid = await _store(session, "python programming language tutorial", workspace_id)
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     today_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -106,16 +123,19 @@ async def test_date_filter_includes_today(session):
         similarity_threshold=0.0,
         date_from=today_midnight,
         date_to=date_to,
+        workspace_id=workspace_id,
     )
     assert any(r.id == mid for r in results)
 
 
-async def test_tag_search(session):
-    dao = MemoryDao(session)
+async def test_tag_search(session, workspace_id):
+    dao = MemoryDao(session, workspace_id)
     await dao.create(
         "Zigbee migration plan", MemoryType.fact, {}, ["matter", "zigbee2mqtt"]
     )
-    results = await hybrid_search(session, "matter", similarity_threshold=0.0)
+    results = await hybrid_search(
+        session, "matter", similarity_threshold=0.0, workspace_id=workspace_id
+    )
     assert results
 
 

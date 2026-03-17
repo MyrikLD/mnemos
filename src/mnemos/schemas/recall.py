@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 from .memory_type import MemoryType
@@ -8,4 +10,4 @@ class RecallResult(BaseModel):
     content: str
     memory_type: MemoryType | None
     tags: list[str]
-    created_at: str
+    created_at: datetime

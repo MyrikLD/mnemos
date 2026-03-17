@@ -14,8 +14,29 @@ def _embed_text(content: str, tags: list[str]) -> str:
 
 
 class MemoryDao:
-    def __init__(self, s: AsyncSession) -> None:
+    def __init__(
+        self,
+        s: AsyncSession,
+        workspace_id: int | None = None,
+        workspace_ids: list[int] | None = None,
+    ) -> None:
         self._s = s
+        self._owned_workspace_id = workspace_id
+        self._workspace_ids = workspace_ids
+
+    def _ws_filter(self):
+        """Return workspace filter condition for writes (owned workspace only)."""
+        if self._owned_workspace_id is not None:
+            return Memory.workspace_id == self._owned_workspace_id
+        return None
+
+    def _ws_filter_read(self):
+        """Return workspace filter condition for reads (all joined workspaces)."""
+        if self._workspace_ids:
+            return Memory.workspace_id.in_(self._workspace_ids)
+        if self._owned_workspace_id is not None:
+            return Memory.workspace_id == self._owned_workspace_id
+        return None
 
     async def _upsert_tags(self, memory_id: int, tags: list[str]) -> None:
         for tag_name in tags:
@@ -55,22 +76,29 @@ class MemoryDao:
         metadata: dict,
         tags: list[str],
     ) -> tuple[int, bool]:
-        memory_id = await self._s.scalar(
-            select(Memory.id).where(Memory.content == content)
-        )
+        # Check for existing memory within same workspace scope
+        q = select(Memory.id).where(Memory.content == content)
+        ws_filter = self._ws_filter()
+        if ws_filter is not None:
+            q = q.where(ws_filter)
+
+        memory_id = await self._s.scalar(q)
         if memory_id is not None:
             return memory_id, False
 
+        values: dict = {
+            "content": str(content),
+            "memory_type": MemoryType(memory_type),
+            "extra_data": metadata or {},
+            "embedding": embed(_embed_text(content, tags or [])),
+        }
+        if self._owned_workspace_id is not None:
+            values["workspace_id"] = self._owned_workspace_id
+
         memory_id = await self._s.scalar(
-            insert(Memory)
-            .values(
-                content=str(content),
-                memory_type=MemoryType(memory_type),
-                extra_data=metadata or {},
-                embedding=embed(_embed_text(content, tags or [])),
-            )
-            .returning(Memory.id)
+            insert(Memory).values(**values).returning(Memory.id)
         )
+        assert memory_id is not None
 
         await self._upsert_tags(memory_id, tags or [])
         return memory_id, True
@@ -84,7 +112,12 @@ class MemoryDao:
         tags: list[str] = _UNSET,  # type: ignore[assignment]
     ) -> int:
         """Update memory fields. Pass _UNSET to leave a field unchanged; None sets it to NULL."""
-        memory_id = await self._s.scalar(select(Memory.id).where(Memory.id == id))
+        q = select(Memory.id).where(Memory.id == id)
+        ws_filter = self._ws_filter()
+        if ws_filter is not None:
+            q = q.where(ws_filter)
+
+        memory_id = await self._s.scalar(q)
         if memory_id is None:
             raise ValueError(f"Memory with id={id} not found")
 
@@ -95,15 +128,16 @@ class MemoryDao:
             values["extra_data"] = metadata or {}
 
         if content is not _UNSET or tags is not _UNSET:
-            new_content = (
-                content
+            _fetched = (
+                None
                 if content is not _UNSET
                 else await self._s.scalar(
                     select(Memory.content).where(Memory.id == memory_id)
                 )
             )
+            new_content: str = content if content is not _UNSET else (_fetched or "")
             new_tags = (
-                list(tags)
+                list(tags)  # type: ignore[arg-type]
                 if tags is not _UNSET
                 else await self._fetch_tag_names(memory_id)
             )
@@ -112,9 +146,10 @@ class MemoryDao:
             values["embedding"] = embed(_embed_text(new_content, new_tags))
 
         if values:
-            await self._s.execute(
-                update(Memory).where(Memory.id == memory_id).values(**values)
-            )
+            stmt = update(Memory).where(Memory.id == memory_id)
+            if ws_filter is not None:
+                stmt = stmt.where(ws_filter)
+            await self._s.execute(stmt.values(**values))
 
         if tags is not _UNSET:
             await self._replace_tags(memory_id, tags)  # type: ignore[arg-type]
@@ -122,29 +157,28 @@ class MemoryDao:
         return memory_id
 
     async def delete(self, id: int) -> None:
-        result = await self._s.scalar(
-            delete(Memory).where(Memory.id == id).returning(Memory.id)
-        )
+        stmt = delete(Memory).where(Memory.id == id)
+        ws_filter = self._ws_filter()
+        if ws_filter is not None:
+            stmt = stmt.where(ws_filter)
+        result = await self._s.scalar(stmt.returning(Memory.id))
         if result is None:
             raise ValueError(f"Memory with id={id} not found")
         await self._cleanup_orphan_tags()
 
     async def get(self, id: int) -> MemoryListItem | None:
-        row = (
-            (
-                await self._s.execute(
-                    select(
-                        Memory.id,
-                        Memory.content,
-                        Memory.memory_type,
-                        Memory.extra_data.label("metadata"),
-                        Memory.created_at,
-                    ).where(Memory.id == id)
-                )
-            )
-            .mappings()
-            .one_or_none()
-        )
+        q = select(
+            Memory.id,
+            Memory.content,
+            Memory.memory_type,
+            Memory.extra_data.label("metadata"),
+            Memory.created_at,
+        ).where(Memory.id == id)
+        ws_filter = self._ws_filter_read()
+        if ws_filter is not None:
+            q = q.where(ws_filter)
+
+        row = (await self._s.execute(q)).mappings().one_or_none()
         if row is None:
             return None
         tags = (await self.fetch_tags([id])).get(id, [])

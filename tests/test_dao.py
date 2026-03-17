@@ -4,8 +4,8 @@ from mnemos.dao import MemoryDao
 from mnemos.schemas import MemoryType
 
 
-async def test_crud(session):
-    dao = MemoryDao(session)
+async def test_crud(session, workspace_id):
+    dao = MemoryDao(session, workspace_id)
 
     # create
     mid, created = await dao.create(

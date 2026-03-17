@@ -22,6 +22,12 @@ class Memory(Base):
         nullable=False,
     )
 
+    workspace_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey("workspaces.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
     __table_args__ = (
         sa.Index("ix_memories_search_vector", "search_vector", postgresql_using="gin"),
         sa.Index(
@@ -31,4 +37,5 @@ class Memory(Base):
             postgresql_with={"m": 16, "ef_construction": 64},
             postgresql_ops={"embedding": "vector_cosine_ops"},
         ),
+        sa.Index("ix_memories_workspace_id", "workspace_id"),
     )

@@ -5,7 +5,7 @@ from mcp.types import ToolAnnotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mnemos.dao import MemoryDao
-from mnemos.db import MCPSessionDep
+from mnemos.db import MCPWorkspaceSessionDep
 from mnemos.schemas import MemoryType, StoreResult
 
 mcp = FastMCP()
@@ -21,10 +21,13 @@ async def update_memory(
     content: str | None = None,
     tags: list[str] | None = None,
     metadata: dict | None = None,
-    s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]
+    ctx: tuple = MCPWorkspaceSessionDep,  # type: ignore[assignment]
 ) -> StoreResult:
     """Update an existing memory by ID. Only provided fields are changed."""
-    dao = MemoryDao(s)
+    s: AsyncSession
+    s, workspace_id, _workspace_ids = ctx
+
+    dao = MemoryDao(s, workspace_id)
     data: dict[str, Any] = {
         "id": id,
         "memory_type": MemoryType(memory_type),

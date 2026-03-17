@@ -1,11 +1,12 @@
 import logging
 import secrets
 import time
+from typing import Awaitable, Callable
 from urllib.parse import urlencode
 
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from pydantic import BaseModel
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from mnemos.db import session
 from mnemos.models.oauth_client import OAuthClient
@@ -52,11 +53,11 @@ _LOGIN_HTML = """\
              box-shadow: 0 2px 8px rgba(0,0,0,.08); }}
     h1 {{ font-size: 1.25rem; font-weight: 600; margin-bottom: 1.5rem; color: #111; }}
     label {{ display: block; font-size: 0.875rem; color: #555; margin-bottom: 0.375rem; }}
-    input[type=password] {{ width: 100%; padding: 0.625rem 0.75rem;
+    input[type=text], input[type=password] {{ width: 100%; padding: 0.625rem 0.75rem;
                             border: 1px solid #d1d5db; border-radius: 6px; color: #111;
-                            font-size: 0.875rem; outline: none; }}
-    input[type=password]:focus {{ border-color: #6366f1; }}
-    button {{ width: 100%; margin-top: 1.25rem; padding: 0.625rem;
+                            font-size: 0.875rem; outline: none; margin-bottom: 1rem; }}
+    input[type=text]:focus, input[type=password]:focus {{ border-color: #6366f1; }}
+    button {{ width: 100%; margin-top: 0.25rem; padding: 0.625rem;
               background: #6366f1; border: none; border-radius: 6px;
               color: #fff; font-size: 0.875rem; font-weight: 500; cursor: pointer; }}
     button:hover {{ background: #4f46e5; }}
@@ -64,6 +65,8 @@ _LOGIN_HTML = """\
               border: 1px solid #f87171; border-radius: 6px;
               color: #dc2626; font-size: 0.8125rem; }}
     .meta {{ margin-top: 1rem; font-size: 0.75rem; color: #9ca3af; }}
+    .register-link {{ margin-top: 1rem; font-size: 0.8125rem; color: #6b7280; text-align: center; }}
+    .register-link a {{ color: #6366f1; }}
   </style>
 </head>
 <body>
@@ -71,12 +74,14 @@ _LOGIN_HTML = """\
     <h1>Mnemos</h1>
     <form method="post">
       <input type="hidden" name="id" value="{pending_id}">
+      <label for="un">Username</label>
+      <input type="text" id="un" name="username" autofocus required autocomplete="username">
       <label for="pw">Password</label>
-      <input type="password" id="pw" name="password" autofocus required
-             autocomplete="current-password">
+      <input type="password" id="pw" name="password" required autocomplete="current-password">
       <button type="submit">Sign in</button>
       {error_block}
     </form>
+    <p class="register-link">No account? <a href="/ui/register">Register</a></p>
     <p class="meta">Client: {client_id}</p>
   </div>
 </body>
@@ -92,9 +97,14 @@ class _PendingAuth(BaseModel):
 
 
 class MnemosOAuthProvider(OAuthProvider):
-    """Full in-process OAuth 2.1 authorization server with password login page."""
+    """Full in-process OAuth 2.1 authorization server with username+password login page."""
 
-    def __init__(self, base_url: str, jwt_secret: str, password: str) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        jwt_secret: str,
+        db_lookup: Callable[[str, str], Awaitable[tuple[int, int] | None]],
+    ) -> None:
         super().__init__(
             base_url=base_url,
             client_registration_options=ClientRegistrationOptions(
@@ -106,7 +116,7 @@ class MnemosOAuthProvider(OAuthProvider):
             required_scopes=["mcp"],
         )
         self._base_url = base_url.rstrip("/")
-        self._password = password
+        self._db_lookup = db_lookup
 
         self._signing_key = derive_jwt_key(
             high_entropy_material=jwt_secret, salt="mnemos-oauth-jwt"
@@ -194,6 +204,7 @@ class MnemosOAuthProvider(OAuthProvider):
     async def _login_post(self, request: Request) -> Response:
         form = await request.form()
         pending_id = str(form.get("id", ""))
+        username = str(form.get("username", ""))
         password = str(form.get("password", ""))
 
         pending = self._pending.get(pending_id)
@@ -207,15 +218,30 @@ class MnemosOAuthProvider(OAuthProvider):
                 status_code=400,
             )
 
-        if not secrets.compare_digest(password.encode(), self._password.encode()):
-            logger.warning("login POST: wrong password client_id=%s", pending.client_id)
+        result = await self._db_lookup(username, password)
+        if result is None:
+            logger.warning(
+                "login POST: bad credentials username=%s client_id=%s",
+                username,
+                pending.client_id,
+            )
             return HTMLResponse(
                 _LOGIN_HTML.format(
                     pending_id=pending_id,
                     client_id=pending.client_id,
-                    error_block='<p class="error">Incorrect password.</p>',
+                    error_block='<p class="error">Incorrect username or password.</p>',
                 ),
                 status_code=401,
+            )
+
+        user_id, _workspace_id = result
+
+        # Link the OAuth client to this user so the middleware can resolve workspace.
+        async with session() as s:
+            await s.execute(
+                sa.update(OAuthClient)
+                .where(OAuthClient.client_id == pending.client_id)
+                .values(user_id=user_id)
             )
 
         del self._pending[pending_id]
@@ -235,7 +261,10 @@ class MnemosOAuthProvider(OAuthProvider):
             str(pending.params.redirect_uri), code=code, state=pending.params.state
         )
         logger.info(
-            "login POST: success client_id=%s code=%s...", pending.client_id, code[:8]
+            "login POST: success username=%s client_id=%s code=%s...",
+            username,
+            pending.client_id,
+            code[:8],
         )
         return RedirectResponse(redirect, status_code=302)
 

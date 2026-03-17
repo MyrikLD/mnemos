@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mnemos.config import settings
 from mnemos.embeddings import embed
 from mnemos.models import Memory, MemoryTag, Tag
-from mnemos.schemas import SearchResult
+from mnemos.schemas import MemoryType, SearchResult
 
 
 async def hybrid_search(
@@ -18,6 +18,8 @@ async def hybrid_search(
     date_from: datetime | None = None,
     date_to: datetime | None = None,
     memory_type: str | None = None,
+    workspace_id: int | None = None,
+    workspace_ids: list[int] | None = None,
 ) -> list[SearchResult]:
     n = (limit or settings.default_limit) * 4
     k = settings.rrf_k
@@ -28,6 +30,10 @@ async def hybrid_search(
     )
 
     conditions = []
+    if workspace_ids:
+        conditions.append(Memory.workspace_id.in_(workspace_ids))
+    elif workspace_id is not None:
+        conditions.append(Memory.workspace_id == workspace_id)
     if date_from:
         conditions.append(Memory.created_at >= date_from)
     if date_to:
@@ -109,12 +115,12 @@ async def hybrid_search(
         ):
             continue
 
-        content, memory_type = contents[doc_id]
+        content, memory_type_str = contents[doc_id]
         scored.append(
             SearchResult(
                 id=doc_id,
                 content=content,
-                memory_type=memory_type,
+                memory_type=MemoryType(memory_type_str),
                 rrf_score=rrf,
                 vec_similarity=similarity,
             )

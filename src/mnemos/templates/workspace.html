@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Workspaces — Mnemos{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-xl font-semibold text-gray-900 tracking-tight">Workspaces</h1>
+    <a href="/" class="inline-flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-700 transition-colors" style="text-decoration:none">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to memories
+    </a>
+</div>
+
+<!-- Owned workspace -->
+<div class="mb-8">
+    <div class="flex items-center gap-2 mb-3">
+        <h2 class="text-[14px] font-semibold text-gray-700">Your workspace</h2>
+        <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full text-[11px] font-semibold uppercase tracking-wide">Owner</span>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100">
+            <div class="text-[15px] font-semibold text-gray-900">{{ workspace_name }}</div>
+            <div class="text-[13px] text-gray-400 mt-0.5">{{ members | length }} member{{ 's' if members | length != 1 else '' }}</div>
+        </div>
+
+        <!-- Members -->
+        <div class="px-5 py-4 border-b border-gray-100">
+            <div class="text-[12px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Members</div>
+            <table class="w-full text-[13px]">
+                <thead>
+                    <tr class="border-b border-gray-100">
+                        <th class="text-left pb-2 font-medium text-gray-400 pr-4">Username</th>
+                        <th class="text-left pb-2 font-medium text-gray-400 pr-4">Role</th>
+                        <th class="text-left pb-2 font-medium text-gray-400">Joined</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in members %}
+                    <tr class="border-b border-gray-50 last:border-0">
+                        <td class="py-2.5 pr-4 text-gray-800 font-medium">{{ m.username }}</td>
+                        <td class="py-2.5 pr-4">
+                            {% if m.role == 'owner' %}
+                            <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full text-[11px] font-semibold uppercase tracking-wide">Owner</span>
+                            {% else %}
+                            <span class="px-2 py-0.5 bg-gray-100 text-gray-500 border border-gray-200 rounded-full text-[11px] font-medium uppercase tracking-wide">Member</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-2.5 text-gray-400 tabular-nums">
+                            {{ m.joined_at.strftime('%Y-%m-%d') if m.joined_at else '' }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Invite links -->
+        <div class="px-5 py-4">
+            <div class="text-[12px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Invite links</div>
+
+            {% if invites %}
+            <div class="mb-4 space-y-2">
+                {% for inv in invites %}
+                <div class="flex items-center gap-3 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg" id="invite-row-{{ inv.token[:8] }}">
+                    <code class="flex-1 min-w-0 text-[12px] text-gray-500 font-mono truncate">{{ base_url }}/ui/invite/{{ inv.token }}</code>
+                    <span class="text-[11px] text-gray-400 shrink-0 whitespace-nowrap">
+                        expires {{ inv.expires_at.strftime('%b %d') if inv.expires_at else '' }}
+                    </span>
+                    <button class="shrink-0 px-2.5 py-1 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-[12px] font-medium rounded-md transition-colors cursor-pointer"
+                            hx-delete="/ui/workspace/invite/{{ inv.token }}"
+                            hx-confirm="Revoke this invite link?"
+                            hx-target="#invite-row-{{ inv.token[:8] }}"
+                            hx-swap="outerHTML">
+                        Revoke
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-[13px] text-gray-400 mb-4">No active invite links.</p>
+            {% endif %}
+
+            <div id="invite-result" class="mb-3"></div>
+            <button class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-[13px] font-medium rounded-lg transition-colors border-0 cursor-pointer"
+                    hx-post="/ui/workspace/invite"
+                    hx-target="#invite-result"
+                    hx-swap="innerHTML">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Create invite link
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Joined workspaces -->
+<div>
+    <h2 class="text-[14px] font-semibold text-gray-700 mb-3">Workspaces you've joined</h2>
+
+    {% if joined_workspaces %}
+    <div class="space-y-2">
+        {% for ws in joined_workspaces %}
+        <div id="joined-ws-{{ ws.id }}" class="flex items-center justify-between gap-4 bg-white border border-gray-200 rounded-xl px-5 py-4 shadow-sm">
+            <div>
+                <div class="text-[14px] font-semibold text-gray-900">{{ ws.name }}</div>
+                <div class="text-[12px] text-gray-400 mt-0.5">
+                    Member since {{ ws.joined_at.strftime('%b %d, %Y') if ws.joined_at else '' }}
+                </div>
+            </div>
+            <button class="shrink-0 px-3 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-[13px] font-medium rounded-lg transition-colors cursor-pointer"
+                    hx-delete="/ui/workspace/{{ ws.id }}/leave"
+                    hx-confirm="Leave '{{ ws.name }}'? You'll lose access to its memories."
+                    hx-target="#joined-ws-{{ ws.id }}"
+                    hx-swap="outerHTML">
+                Leave
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-10 bg-white border border-gray-200 rounded-xl text-gray-400">
+        <div class="text-3xl mb-2 opacity-40">🤝</div>
+        <div class="text-[14px] font-medium text-gray-500 mb-1">No joined workspaces</div>
+        <div class="text-[13px]">Accept an invite link from another user to join their workspace.</div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.body.addEventListener('htmx:afterRequest', function(evt) {
+    if (evt.detail.pathInfo && evt.detail.pathInfo.requestPath === '/ui/workspace/invite') {
+        const res = evt.detail.xhr;
+        if (res.status === 200) {
+            const data = JSON.parse(res.responseText);
+            document.getElementById('invite-result').innerHTML =
+                '<div class="flex items-start gap-2 px-4 py-3 bg-green-50 border border-green-200 text-green-800 text-[13px] rounded-lg mb-2">' +
+                '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
+                '<div class="min-w-0"><div class="font-medium mb-0.5">Invite link created</div>' +
+                '<a href="' + data.invite_url + '" class="text-green-700 font-mono text-[12px] break-all" style="text-decoration:none">' + data.invite_url + '</a></div></div>';
+        }
+    }
+});
+</script>
+
+{% endblock %}
