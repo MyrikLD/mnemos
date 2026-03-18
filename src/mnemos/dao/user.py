@@ -1,3 +1,4 @@
+from pydantic import EmailStr
 from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,10 +11,16 @@ class UserDao:
 
     async def get_by_email(self, email: str) -> User | None:
         row = (
-            await self._s.execute(
-                select(User.hashed_password, User.id).where(User.email == email.strip().lower())
+            (
+                await self._s.execute(
+                    select(User.hashed_password, User.id).where(
+                        User.email == email.strip().lower()
+                    )
+                )
             )
-        ).mappings().one_or_none()
+            .mappings()
+            .one_or_none()
+        )
         return row
 
     async def get_by_id(self, id: int) -> User | None:
@@ -22,7 +29,9 @@ class UserDao:
         ).scalar_one_or_none()
         return row
 
-    async def create(self, email: str, display_name: str, hashed_password: str) -> User:
+    async def create(
+        self, email: EmailStr, display_name: str, hashed_password: str
+    ) -> User:
         user_id = await self._s.scalar(
             insert(User)
             .values(

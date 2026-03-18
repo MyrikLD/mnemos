@@ -16,6 +16,7 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.48",
     "tokenizers>=0.21.0",
     "greenlet>=3.3.2",
+    "email-validator>=2.3.0",
 ]
 
 [project.scripts]

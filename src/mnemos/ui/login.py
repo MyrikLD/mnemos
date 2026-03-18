@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Form, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
+from pydantic import EmailStr
 
 from mnemos.auth import hash_password, verify_password
 from mnemos.dao.user import UserDao
@@ -63,7 +64,7 @@ async def register_get(request: Request, next: str = "/") -> HTMLResponse:
 async def register_post(
     request: Request,
     s: APISessionDep,
-    email: str = Form(),
+    email: EmailStr = Form(),
     display_name: str = Form(),
     password: str = Form(),
     password2: str = Form(),
