@@ -16,6 +16,11 @@ class Memory(Base):
     created_at = sa.Column(
         sa.DateTime(timezone=False), server_default=sa.func.now(), nullable=False
     )
+    workspace_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey("workspaces.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     embedding = sa.Column(Vector(384), nullable=True)
     search_vector = sa.Column(
         TSVECTOR,

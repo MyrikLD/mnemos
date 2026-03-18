@@ -1,4 +1,5 @@
-from sqlalchemy import delete, insert, select, update
+import sqlalchemy as sa
+from sqlalchemy import and_, delete, insert, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -55,10 +56,18 @@ class MemoryDao:
         metadata: dict,
         tags: list[str],
         user_id: int,
+        workspace_id: int | None = None,
     ) -> tuple[int, bool]:
+        ws_check = (
+            Memory.workspace_id == workspace_id
+            if workspace_id is not None
+            else Memory.workspace_id.is_(None)
+        )
         memory_id = await self._s.scalar(
             select(Memory.id).where(
-                Memory.content == content, Memory.created_by == user_id
+                Memory.content == content,
+                Memory.created_by == user_id,
+                ws_check,
             )
         )
         if memory_id is not None:
@@ -72,6 +81,7 @@ class MemoryDao:
                 extra_data=metadata or {},
                 embedding=embed(_embed_text(content, tags or [])),
                 created_by=user_id,
+                workspace_id=workspace_id,
             )
             .returning(Memory.id)
         )
@@ -84,14 +94,28 @@ class MemoryDao:
         self,
         id: int,
         user_id: int,
+        workspace_ids: list[int] | None = None,
         content: str = _UNSET,  # type: ignore[assignment]
         memory_type: MemoryType = _UNSET,  # type: ignore[assignment]
         metadata: dict = _UNSET,  # type: ignore[assignment]
         tags: list[str] = _UNSET,  # type: ignore[assignment]
     ) -> int:
-        """Update memory fields. Pass _UNSET to leave a field unchanged; None sets it to NULL."""
+        """Update memory fields. Pass _UNSET to leave a field unchanged; None sets it to NULL.
+
+        workspace_ids: user's accessible workspace IDs (membership proof).
+        When provided, workspace memories the user belongs to are also updatable.
+        When None/empty, only personal memories (workspace_id IS NULL) are updatable.
+        """
+        if workspace_ids:
+            access_check = or_(
+                and_(Memory.workspace_id.is_(None), Memory.created_by == user_id),
+                Memory.workspace_id.in_(workspace_ids),
+            )
+        else:
+            access_check = and_(Memory.workspace_id.is_(None), Memory.created_by == user_id)
+
         memory_id = await self._s.scalar(
-            select(Memory.id).where(Memory.id == id, Memory.created_by == user_id)
+            select(Memory.id).where(Memory.id == id, access_check)
         )
         if memory_id is None:
             raise ValueError(f"Memory with id={id} not found")
@@ -132,17 +156,49 @@ class MemoryDao:
 
         return memory_id
 
-    async def delete(self, id: int, user_id: int) -> None:
+    async def delete(self, id: int, user_id: int, workspace_ids: list[int] | None = None) -> None:
+        """Delete a memory.
+
+        workspace_ids: user's accessible workspace IDs (membership proof).
+        When provided, workspace memories the user belongs to are also deletable.
+        When None/empty, only personal memories (workspace_id IS NULL) are deletable.
+        """
+        if workspace_ids:
+            access_check = or_(
+                and_(Memory.workspace_id.is_(None), Memory.created_by == user_id),
+                Memory.workspace_id.in_(workspace_ids),
+            )
+        else:
+            access_check = and_(Memory.workspace_id.is_(None), Memory.created_by == user_id)
+
         result = await self._s.scalar(
             delete(Memory)
-            .where(Memory.id == id, Memory.created_by == user_id)
+            .where(Memory.id == id, access_check)
             .returning(Memory.id)
         )
         if result is None:
             raise ValueError(f"Memory with id={id} not found")
         await self._cleanup_orphan_tags()
 
-    async def get(self, id: int, user_id: int) -> MemoryListItem | None:
+    async def get(
+        self,
+        id: int,
+        user_id: int,
+        workspace_ids: list[int] | None = None,
+    ) -> MemoryListItem | None:
+        """Fetch a memory by ID.
+
+        workspace_ids: if provided, also allows access to memories in those workspaces.
+        When None or empty, only personal memories are accessible.
+        """
+        if workspace_ids:
+            access_check = or_(
+                and_(Memory.workspace_id.is_(None), Memory.created_by == user_id),
+                Memory.workspace_id.in_(workspace_ids),
+            )
+        else:
+            access_check = and_(Memory.workspace_id.is_(None), Memory.created_by == user_id)
+
         row = (
             (
                 await self._s.execute(
@@ -152,7 +208,8 @@ class MemoryDao:
                         Memory.memory_type,
                         Memory.extra_data.label("metadata"),
                         Memory.created_at,
-                    ).where(Memory.id == id, Memory.created_by == user_id)
+                        Memory.workspace_id,
+                    ).where(Memory.id == id, access_check)
                 )
             )
             .mappings()

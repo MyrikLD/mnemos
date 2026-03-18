@@ -6,3 +6,4 @@ from .recall import RecallResult
 from .search import MemoryResult, SearchResult
 from .store import ImportItem, StoreResult
 from .update import UpdateMemoryRequest
+from .workspace import WorkspaceInfo, WorkspaceMemberInfo

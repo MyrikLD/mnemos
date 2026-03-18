@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mnemos.auth import UserDep
 from mnemos.dao import MemoryDao
+from mnemos.dao.workspace import WorkspaceDao
 from mnemos.db import MCPSessionDep
 from mnemos.schemas import MemoryType, StoreResult
 
@@ -19,10 +20,25 @@ async def store_memory(
     memory_type: MemoryType,
     tags: list[str] | None = None,
     metadata: dict | None = None,
+    workspace: str | None = None,
     s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]
     uid: int = UserDep,  # type: ignore[assignment]
 ) -> StoreResult:
-    """Save a new memory. Idempotent: returns existing if content already stored."""
+    """Save a new memory. Idempotent: returns existing if content already stored.
+
+    workspace: name of the workspace to store into (must be a member).
+               Omit or pass None to store as a personal memory.
+    """
+    workspace_id: int | None = None
+    if workspace is not None:
+        ws = await WorkspaceDao(s).get_by_name(workspace, uid)
+        if ws is None:
+            raise ValueError(
+                f"Workspace '{workspace}' not found or you are not a member. "
+                "Use list_workspaces() to see available workspaces."
+            )
+        workspace_id = ws.id
+
     dao = MemoryDao(s)
     memory_id, created = await dao.create(
         content=content,
@@ -30,5 +46,6 @@ async def store_memory(
         metadata=metadata or {},
         tags=tags or [],
         user_id=uid,
+        workspace_id=workspace_id,
     )
     return StoreResult(id=memory_id, created=created)

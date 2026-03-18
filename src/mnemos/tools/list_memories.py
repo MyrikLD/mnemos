@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mnemos.auth import UserDep
 from mnemos.dao import MemoryDao
+from mnemos.dao.workspace import WorkspaceDao, accessible_memories_filter
 from mnemos.db import MCPSessionDep
 from mnemos.models import Memory, MemoryTag, Tag
 from mnemos.schemas import MemoryListItem, MemoryPage, MemoryType
@@ -19,6 +20,7 @@ _COLS = (
     Memory.memory_type,
     Memory.extra_data.label("metadata"),
     Memory.created_at,
+    Memory.workspace_id,
 )
 
 
@@ -38,7 +40,8 @@ async def list_memories(
     page_size = min(page_size, 100)
     offset = (page - 1) * page_size
 
-    q = select(*_COLS).where(Memory.created_by == uid)
+    workspace_ids = await WorkspaceDao(s).get_accessible_workspace_ids(uid)
+    q = select(*_COLS).where(accessible_memories_filter(uid, workspace_ids))
 
     if memory_type:
         q = q.where(Memory.memory_type == memory_type)

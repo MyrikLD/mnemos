@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 
 from mnemos.dao import MemoryDao
+from mnemos.dao.workspace import WorkspaceDao, accessible_memories_filter
 from mnemos.db import APISessionDep
 from mnemos.models import Memory, MemoryTag, Tag
 from mnemos.models.user import User
@@ -28,6 +29,7 @@ _COLS = (
     Memory.content,
     Memory.memory_type,
     Memory.created_at,
+    Memory.workspace_id,
 )
 
 
@@ -40,12 +42,30 @@ async def index(
     page_size: int = 20,
     memory_type: str | None = None,
     tag: str = "",
+    workspace: str = "",
 ) -> HTMLResponse:
     uid: int = user.id  # type: ignore[assignment]
     page_size = min(page_size, 100)
     offset = (page - 1) * page_size
 
-    q = select(*_COLS).where(Memory.created_by == uid)
+    ws_dao = WorkspaceDao(s)
+    workspace_ids = await ws_dao.get_accessible_workspace_ids(uid)
+    workspaces = await ws_dao.list_workspaces(uid)
+
+    # Apply workspace filter
+    if workspace == "__personal__":
+        access_filter = accessible_memories_filter(uid, [])
+    elif workspace:
+        ws_obj = next((ws for ws in workspaces if ws.name == workspace), None)
+        if ws_obj is not None:
+            access_filter = Memory.workspace_id == ws_obj.id
+        else:
+            access_filter = accessible_memories_filter(uid, workspace_ids)
+    else:
+        access_filter = accessible_memories_filter(uid, workspace_ids)
+
+    q = select(*_COLS).where(access_filter)
+
     if memory_type:
         q = q.where(Memory.memory_type == MemoryType(memory_type))
     if tag:
@@ -70,10 +90,14 @@ async def index(
     ids = [row["id"] for row in rows]
     tags_map = await MemoryDao(s).fetch_tags(ids)
 
+    ws_ids = {row["workspace_id"] for row in rows if row["workspace_id"]}
+    ws_names = await ws_dao.get_names_by_ids(ws_ids) if ws_ids else {}
+
     memories = [
         {
             **row,
             "tags": tags_map.get(row["id"], []),
+            "workspace_name": ws_names.get(row["workspace_id"]) if row["workspace_id"] else None,
         }
         for row in rows
     ]
@@ -90,6 +114,8 @@ async def index(
             "total_pages": total_pages,
             "memory_type": memory_type,
             "tag": tag,
+            "workspace": workspace,
+            "workspaces": workspaces,
         },
     )
 
@@ -104,8 +130,14 @@ async def search(
     uid: int = user.id  # type: ignore[assignment]
     results = []
     if q:
+        workspace_ids = await WorkspaceDao(s).get_accessible_workspace_ids(uid)
         raw = await hybrid_search(
-            s, query=q, user_id=uid, limit=20, similarity_threshold=0.0
+            s,
+            query=q,
+            user_id=uid,
+            workspace_ids=workspace_ids,
+            limit=20,
+            similarity_threshold=0.0,
         )
         if raw:
             dao = MemoryDao(s)
@@ -118,6 +150,9 @@ async def search(
                     )
                 ).all()
             )
+            ws_ids = {r.workspace_id for r in raw if r.workspace_id}
+            ws_names = await WorkspaceDao(s).get_names_by_ids(ws_ids) if ws_ids else {}
+
             for r in raw:
                 results.append(
                     {
@@ -127,6 +162,7 @@ async def search(
                         "tags": tags_map.get(r.id, []),
                         "created_at": created_map.get(r.id, utcnow()),  # type: ignore[call-overload]
                         "rrf_score": round(r.rrf_score, 4),
+                        "workspace_name": ws_names.get(r.workspace_id) if r.workspace_id else None,
                     }
                 )
     return templates.TemplateResponse(
@@ -142,11 +178,20 @@ async def memory_detail(
     user: User = Depends(get_current_user),
 ) -> HTMLResponse:
     uid: int = user.id  # type: ignore[assignment]
-    memory = await MemoryDao(s).get(id, uid)
+    workspace_ids = await WorkspaceDao(s).get_accessible_workspace_ids(uid)
+    memory = await MemoryDao(s).get(id, uid, workspace_ids=workspace_ids)
     if memory is None:
         raise HTTPException(status_code=404, detail="Memory not found")
+
+    ws_name: str | None = None
+    if memory.workspace_id:
+        names = await WorkspaceDao(s).get_names_by_ids({memory.workspace_id})
+        ws_name = names.get(memory.workspace_id)
+
     return templates.TemplateResponse(
-        request, "memory.html", {"user": user, "memory": memory}
+        request,
+        "memory.html",
+        {"user": user, "memory": memory, "workspace_name": ws_name},
     )
 
 
@@ -160,6 +205,7 @@ async def update_memory(
 ) -> HTMLResponse:
     uid: int = user.id  # type: ignore[assignment]
     dao = MemoryDao(s)
+    # get without workspace_ids: personal only (update restricted to personal memories)
     existing = await dao.get(id, uid)
     if existing is None:
         raise HTTPException(status_code=404, detail="Memory not found")

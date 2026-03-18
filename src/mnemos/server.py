@@ -12,6 +12,7 @@ from mnemos.tools import (
     search_by_tag,
     store,
     update,
+    workspaces,
 )
 
 
@@ -35,3 +36,4 @@ mcp.mount(search_by_tag)
 mcp.mount(delete)
 mcp.mount(update)
 mcp.mount(health)
+mcp.mount(workspaces)

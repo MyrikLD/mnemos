@@ -7,3 +7,4 @@ from .retrieve import mcp as retrieve
 from .search_by_tag import mcp as search_by_tag
 from .store import mcp as store
 from .update import mcp as update
+from .workspaces import mcp as workspaces
