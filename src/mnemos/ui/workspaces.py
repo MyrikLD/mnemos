@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.exc import IntegrityError
 
 from mnemos.dao.workspace import WorkspaceDao
 from mnemos.db import APISessionDep
-from mnemos.models.user import User
-from mnemos.ui.utils import get_current_user, templates
+from mnemos.ui.utils import templates, UserDep
 
 router = APIRouter()
 
@@ -14,9 +13,9 @@ router = APIRouter()
 async def workspaces_list(
     request: Request,
     s: APISessionDep,
-    user: User = Depends(get_current_user),
+    user: UserDep,
 ) -> HTMLResponse:
-    uid: int = user.id  # type: ignore[assignment]
+    uid: int = user.id
     workspaces = await WorkspaceDao(s).list_workspaces(user_id=uid)
     return templates.TemplateResponse(
         request, "workspaces.html", {"user": user, "workspaces": workspaces}
@@ -26,7 +25,7 @@ async def workspaces_list(
 @router.get("/workspaces/new", response_class=HTMLResponse)
 async def workspace_new_get(
     request: Request,
-    user: User = Depends(get_current_user),
+    user: UserDep,
 ) -> HTMLResponse:
     return templates.TemplateResponse(request, "workspace_new.html", {"user": user})
 
@@ -35,10 +34,10 @@ async def workspace_new_get(
 async def workspace_new_post(
     request: Request,
     s: APISessionDep,
+    user: UserDep,
     name: str = Form(),
-    user: User = Depends(get_current_user),
 ) -> Response:
-    uid: int = user.id  # type: ignore[assignment]
+    uid: int = user.id
     name = name.strip()
     if not name:
         return templates.TemplateResponse(
@@ -68,9 +67,9 @@ async def workspace_detail(
     request: Request,
     workspace_id: int,
     s: APISessionDep,
-    user: User = Depends(get_current_user),
+    user: UserDep,
 ) -> HTMLResponse:
-    uid: int = user.id  # type: ignore[assignment]
+    uid: int = user.id
     dao = WorkspaceDao(s)
     ws = await dao.get_by_id_for_user(workspace_id, uid)
     if ws is None:
@@ -88,10 +87,17 @@ async def workspace_invite(
     request: Request,
     workspace_id: int,
     s: APISessionDep,
+    user: UserDep,
     expires_in_hours: int = Form(default=72),
-    user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    uid: int = user.id  # type: ignore[assignment]
+    uid: int = user.id
+    ws = await WorkspaceDao(s).get_by_id_for_user(workspace_id, uid)
+    if ws is None:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    if ws.is_personal:
+        raise HTTPException(
+            status_code=400, detail="Cannot invite to a personal workspace"
+        )
     try:
         token = await WorkspaceDao(s).create_invite(
             workspace_id=workspace_id,
@@ -115,11 +121,17 @@ async def workspace_invite(
 async def workspace_leave(
     workspace_id: int,
     s: APISessionDep,
-    user: User = Depends(get_current_user),
+    user: UserDep,
 ) -> Response:
-    uid: int = user.id  # type: ignore[assignment]
+    uid: int = user.id
+    dao = WorkspaceDao(s)
+    ws = await dao.get_by_id_for_user(workspace_id, uid)
+    if ws is None:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    if ws.is_personal:
+        raise HTTPException(status_code=400, detail="Cannot leave a personal workspace")
     try:
-        await WorkspaceDao(s).remove_member(workspace_id=workspace_id, user_id=uid)
+        await dao.remove_member(workspace_id=workspace_id, user_id=uid)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return RedirectResponse("/ui/workspaces", status_code=303)
@@ -129,11 +141,19 @@ async def workspace_leave(
 async def workspace_delete(
     workspace_id: int,
     s: APISessionDep,
-    user: User = Depends(get_current_user),
+    user: UserDep,
 ) -> Response:
-    uid: int = user.id  # type: ignore[assignment]
+    uid: int = user.id
+    dao = WorkspaceDao(s)
+    ws = await dao.get_by_id_for_user(workspace_id, uid)
+    if ws is None:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    if ws.is_personal:
+        raise HTTPException(
+            status_code=400, detail="Cannot delete a personal workspace"
+        )
     try:
-        await WorkspaceDao(s).delete_workspace(workspace_id=workspace_id, owner_id=uid)
+        await dao.delete_workspace(workspace_id=workspace_id, owner_id=uid)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return RedirectResponse("/ui/workspaces", status_code=303)
@@ -144,7 +164,7 @@ async def join_get(
     request: Request,
     token: str,
     s: APISessionDep,
-    user: User = Depends(get_current_user),
+    user: UserDep,
 ) -> HTMLResponse:
     row = await WorkspaceDao(s).get_invite(token)
     if row is None:
@@ -166,9 +186,9 @@ async def join_get(
 async def join_post(
     token: str,
     s: APISessionDep,
-    user: User = Depends(get_current_user),
+    user: UserDep,
 ) -> Response:
-    uid: int = user.id  # type: ignore[assignment]
+    uid: int = user.id
     try:
         ws = await WorkspaceDao(s).use_invite(token=token, user_id=uid)
     except ValueError as e:
