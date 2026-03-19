@@ -14,7 +14,6 @@ from memlord.tools import (
     workspaces,
 )
 
-
 mcp: FastMCP = FastMCP(
     "Memlord",
     auth=MemlordOAuthProvider(
