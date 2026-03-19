@@ -1,6 +1,6 @@
 MNEMOS COMMERCIAL LICENSE
 
-Copyright (c) 2024-present Yorsh Siarhei (myrik260138@gmail.com) and Dmitry Karnei (5783354@gmail.com).
+Copyright (c) 2026-present Yorsh Siarhei (myrik260138@gmail.com) and Dmitry Karnei (5783354@gmail.com).
 
 This software is licensed under the GNU Affero General Public License v3.0
 (AGPL-3.0-only) by default — see the LICENSE file. The AGPL applies to anyone
@@ -10,7 +10,10 @@ You may use, modify, and distribute this software under the terms of the AGPL.
 If you modify the software or run it as a network service, you must make the
 complete corresponding source code available to users.
 
-Commercial use under terms different from the AGPL requires a paid license.
+If you comply with the AGPL, you may use the software without a commercial license.
+
+If you wish to use the software without complying with the AGPL requirements
+(including source code disclosure), you must obtain a paid Commercial License.
 
 A Commercial License may be obtained by purchasing it from the copyright
 holders. It is not granted automatically and takes effect only upon written
@@ -20,6 +23,9 @@ The Commercial License grants the licensee the right to:
   - Use the software in proprietary or closed-source products
   - Modify the software without releasing source code
   - Offer the software as part of a commercial service (SaaS)
+
+The Commercial License is granted per organization and is non-transferable
+unless explicitly agreed in writing.
 
 To purchase a Commercial License, contact:
   myrik260138@gmail.com or 5783354@gmail.com
