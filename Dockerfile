@@ -10,6 +10,7 @@ COPY scripts/ scripts/
 RUN pip install --no-cache-dir huggingface_hub && python scripts/download_model.py
 # Copy source code
 COPY src/ src/
+COPY LICENSE* .
 RUN uv sync --no-dev --frozen
 
 # ── Stage 2: runtime image ────────────────────────────────────────────────────

@@ -9,3 +9,4 @@ __pycache__
 *.db-wal
 .pytest_cache
 .mypy_cache
+data/
