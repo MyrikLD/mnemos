@@ -1,5 +1,6 @@
 services:
   memlord:
+    image: ghcr.io/myrikld/memlord:latest
     build: .
     ports:
       - "8000:8000"
@@ -7,6 +8,10 @@ services:
       - ./data:/data
     env_file:
       - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
     restart: unless-stopped
 
   postgres:
@@ -17,8 +22,6 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=memlord
-    ports:
-      - "5432:5432"
     volumes:
       - ./data/postgres:/var/lib/postgresql/data/pgdata
     healthcheck:
