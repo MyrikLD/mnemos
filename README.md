@@ -1,4 +1,4 @@
-# 🧠 Memlord
+<h1 align="center">Memlord</h1>
 
 <h4 align="center">Self-hosted MCP memory server with hybrid BM25 + semantic search, backed by PostgreSQL +
 pgvector.</h4>
