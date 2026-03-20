@@ -1,6 +1,7 @@
 import logging
 import secrets
 import time
+from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 import sqlalchemy as sa
@@ -28,6 +29,7 @@ from memlord.auth import hash_password
 from memlord.dao.user import UserDao
 from memlord.db import session
 from memlord.models.oauth_client import OAuthClient
+from memlord.models.revoked_token import RevokedToken
 
 logger = logging.getLogger(__name__)
 
@@ -467,6 +469,16 @@ class MemlordOAuthProvider(OAuthProvider):
         jti = claims.get("jti")
         if not jti:
             return None
+
+        # Check revocation in DB (survives restarts, works cross-instance).
+        async with session() as s:
+            revoked = await s.scalar(
+                sa.select(RevokedToken.jti).where(RevokedToken.jti == jti)
+            )
+        if revoked is not None:
+            logger.debug("load_access_token: jti revoked jti=%s...", jti[:8])
+            return None
+
         stored = self._access_tokens.get(jti)
         if stored is not None:
             return stored
@@ -529,7 +541,7 @@ class MemlordOAuthProvider(OAuthProvider):
         if scopes and not set(scopes).issubset(set(refresh_token.scopes)):
             raise TokenError("invalid_scope", "Requested scopes exceed original grant")
         effective_scopes = scopes or refresh_token.scopes
-        self._revoke_pair(refresh_token_str=refresh_token.token)
+        await self._revoke_pair(refresh_token_str=refresh_token.token)
         if client.client_id is None:
             raise TokenError("invalid_client", "Missing client_id")
         token = self._issue_token_pair(client.client_id, effective_scopes)
@@ -543,9 +555,9 @@ class MemlordOAuthProvider(OAuthProvider):
     async def revoke_token(self, token: AccessToken | RefreshToken) -> None:  # type: ignore[override]
         logger.info("revoke_token type=%s", type(token).__name__)
         if isinstance(token, AccessToken):
-            self._revoke_pair(access_token_str=token.token)
+            await self._revoke_pair(access_token_str=token.token)
         else:
-            self._revoke_pair(refresh_token_str=token.token)
+            await self._revoke_pair(refresh_token_str=token.token)
 
     # ------------------------------------------------------------------
     # Helpers
@@ -590,11 +602,27 @@ class MemlordOAuthProvider(OAuthProvider):
             scope=" ".join(scopes),
         )
 
-    def _revoke_pair(
+    async def _revoke_pair(
         self,
         access_token_str: str | None = None,
         refresh_token_str: str | None = None,
     ) -> None:
+        # Collect (jti, expires_at) from JWT claims for DB persistence.
+        to_revoke: list[tuple[str, datetime]] = []
+        for token_str in filter(None, [access_token_str, refresh_token_str]):
+            try:
+                claims = self._jwt.verify_token(token_str)
+                jti = claims.get("jti")
+                exp = claims.get("exp")
+                if jti:
+                    expires_at = datetime.fromtimestamp(
+                        exp if exp else time.time() + REFRESH_TOKEN_TTL,
+                        tz=timezone.utc,
+                    ).replace(tzinfo=None)
+                    to_revoke.append((jti, expires_at))
+            except JoseError:
+                pass
+
         if access_token_str:
             jti = self._token_to_jti.pop(access_token_str, None)
             if jti:
@@ -612,3 +640,12 @@ class MemlordOAuthProvider(OAuthProvider):
                 if jti:
                     self._access_tokens.pop(jti, None)
                 self._access_to_refresh.pop(paired_access, None)
+
+        if to_revoke:
+            async with session() as s:
+                for jti, expires_at in to_revoke:
+                    await s.execute(
+                        pg_insert(RevokedToken)
+                        .values(jti=jti, expires_at=expires_at)
+                        .on_conflict_do_nothing()
+                    )
