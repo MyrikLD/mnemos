@@ -23,6 +23,7 @@ async def recall_memory(
     n_results: int = 5,
     memory_type: MemoryType | None = None,
     snippet_length: int | None = 200,
+    workspace: str | None = None,
     s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]
     uid: int = UserDep,  # type: ignore[assignment]
 ) -> list[RecallResult]:
@@ -33,6 +34,7 @@ async def recall_memory(
     Returns compact snippets by default (snippet_length=200). To get the full
     content of a specific memory, call get_memory(id).
     Set snippet_length=None to return full content immediately.
+    Pass workspace=<name> to search only within a specific workspace.
     """
     date_from: datetime | None = None
     date_to: datetime | None = None
@@ -54,7 +56,14 @@ async def recall_memory(
             remaining = remaining.replace(date_str, "")
         semantic_query = remaining.strip() or query
 
-    workspace_ids = await WorkspaceDao(s).get_accessible_workspace_ids(uid)
+    ws_dao = WorkspaceDao(s)
+    if workspace is not None:
+        ws = await ws_dao.get_by_name(workspace, uid)
+        if ws is None:
+            raise ValueError(f"Workspace {workspace!r} not found or not accessible")
+        workspace_ids = [ws.id]
+    else:
+        workspace_ids = await ws_dao.get_accessible_workspace_ids(uid)
     results = await hybrid_search(
         s,
         query=semantic_query,
