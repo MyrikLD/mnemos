@@ -1,3 +1,4 @@
+from .base import Base
 from .memory import Memory
 from .memory_tag import MemoryTag
 from .oauth_client import OAuthClient
