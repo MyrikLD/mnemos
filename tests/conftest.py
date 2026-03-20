@@ -10,7 +10,7 @@ from memlord.auth import hash_password
 from memlord.config import settings
 from memlord.dao.user import UserDao
 from memlord.dao.workspace import WorkspaceDao
-from memlord.models.base import Base
+from memlord.models import Base
 
 
 @pytest.fixture(scope="session")
