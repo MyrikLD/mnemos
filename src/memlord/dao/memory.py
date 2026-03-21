@@ -1,7 +1,9 @@
-from sqlalchemy import delete, insert, select, update
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import Float, bindparam, delete, insert, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from memlord.config import settings
 from memlord.dao.workspace import WorkspaceDao
 from memlord.embeddings import embed
 from memlord.models import Memory, MemoryTag, Tag
@@ -64,7 +66,8 @@ class MemoryDao:
         metadata: dict,
         tags: list[str],
         workspace_id: int | None = None,
-    ) -> tuple[int, bool]:
+    ) -> tuple[int, bool, int | None, float | None]:
+        """Returns (id, created, near_duplicate_id, near_duplicate_similarity)."""
         if workspace_id is None:
             workspace_id = await self._personal_workspace_id()
 
@@ -75,7 +78,29 @@ class MemoryDao:
             )
         )
         if memory_id is not None:
-            return memory_id, False
+            return memory_id, False, None, None
+
+        vector = await embed(_embed_text(content, tags or []))
+
+        # Check for near-duplicates via cosine similarity
+        near_dup_id: int | None = None
+        near_dup_sim: float | None = None
+        vec_param = bindparam("vec", type_=Vector(384))
+        distance_expr = Memory.embedding.op("<=>", return_type=Float)(vec_param)
+        dup_row = (
+            await self._s.execute(
+                select(Memory.id, distance_expr.label("distance"))
+                .where(Memory.embedding.isnot(None), Memory.workspace_id == workspace_id)
+                .order_by(distance_expr)
+                .limit(1),
+                {"vec": vector},
+            )
+        ).mappings().one_or_none()
+        if dup_row is not None:
+            similarity = 1.0 - dup_row["distance"]
+            if similarity >= settings.dedup_threshold:
+                near_dup_id = dup_row["id"]
+                near_dup_sim = round(similarity, 4)
 
         memory_id = await self._s.scalar(
             insert(Memory)
@@ -83,7 +108,7 @@ class MemoryDao:
                 content=str(content),
                 memory_type=MemoryType(memory_type),
                 extra_data=metadata or {},
-                embedding=await embed(_embed_text(content, tags or [])),
+                embedding=vector,
                 created_by=self._uid,
                 workspace_id=workspace_id,
             )
@@ -92,7 +117,7 @@ class MemoryDao:
         assert memory_id is not None
 
         await self._upsert_tags(memory_id, tags or [])
-        return memory_id, True
+        return memory_id, True, near_dup_id, near_dup_sim
 
     async def update(
         self,

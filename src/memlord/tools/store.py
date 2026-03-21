@@ -44,11 +44,16 @@ async def store_memory(
     workspace_id = ws.id
 
     dao = MemoryDao(s, uid)
-    memory_id, created = await dao.create(
+    memory_id, created, near_dup_id, near_dup_sim = await dao.create(
         content=content,
         memory_type=memory_type,
         metadata=metadata or {},
         tags=tags or [],
         workspace_id=workspace_id,
     )
-    return StoreResult(id=memory_id, created=created)
+    return StoreResult(
+        id=memory_id,
+        created=created,
+        near_duplicate_id=near_dup_id,
+        near_duplicate_similarity=near_dup_sim,
+    )

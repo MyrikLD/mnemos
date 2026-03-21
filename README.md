@@ -35,6 +35,8 @@ pgvector</h4>
 - 🐘 **PostgreSQL** — pgvector for embeddings, tsvector for full-text search
 - 📊 **Progressive disclosure** — search returns compact snippets by default; call `get_memory(id)` only for what you
   need, reducing token usage
+- 🔁 **Deduplication** — `store_memory` warns when a near-identical memory already exists (cosine similarity ≥ 0.95),
+  letting the caller decide whether to keep or discard
 
 ---
 
@@ -143,32 +145,20 @@ deploying.
 
 ## 🛠️ MCP Tools
 
-| Tool              | Description                                                             |
-|-------------------|-------------------------------------------------------------------------|
-| `store_memory`    | Save a memory (idempotent per workspace by content)                     |
-| `retrieve_memory` | Hybrid semantic + full-text search; returns snippets by default         |
-| `recall_memory`   | Search by natural-language time expression; returns snippets by default |
-| `list_memories`   | Paginated list with type/tag filters                                    |
-| `search_by_tag`   | AND/OR tag search                                                       |
-| `get_memory`      | Fetch a single memory by ID with full content                           |
-| `update_memory`   | Update content, type, tags, or metadata by ID                           |
-| `delete_memory`   | Delete by ID                                                            |
-| `move_memory`     | Move a memory to a different workspace                                  |
-| `list_workspaces` | List workspaces you are a member of (including personal)                |
+| Tool              | Description                                                                   |
+|-------------------|-------------------------------------------------------------------------------|
+| `store_memory`    | Save a memory (idempotent per workspace by content); warns on near-duplicates |
+| `retrieve_memory` | Hybrid semantic + full-text search; returns snippets by default               |
+| `recall_memory`   | Search by natural-language time expression; returns snippets by default       |
+| `list_memories`   | Paginated list with type/tag filters                                          |
+| `search_by_tag`   | AND/OR tag search                                                             |
+| `get_memory`      | Fetch a single memory by ID with full content                                 |
+| `update_memory`   | Update content, type, tags, or metadata by ID                                 |
+| `delete_memory`   | Delete by ID                                                                  |
+| `move_memory`     | Move a memory to a different workspace                                        |
+| `list_workspaces` | List workspaces you are a member of (including personal)                      |
 
 Workspace management (create, invite, join, leave) is handled via the Web UI.
-
-### 📊 Progressive disclosure
-
-`retrieve_memory` and `recall_memory` return compact snippets (200 chars) by default. Drill into a specific memory with
-`get_memory(id)` to get full content, tags, and metadata — only when you actually need it.
-
-```
-recall_memory("asyncio event loop")   →  [{ id: 42, content: "Asyncio uses a single-threaded...", ... }]
-get_memory(42)                         →  full content + tags + metadata
-```
-
-Pass `snippet_length=None` to get full content immediately.
 
 ---
 
