@@ -112,17 +112,15 @@ docker compose up
 
 Each search request runs BM25 and vector KNN **in parallel**, then merges results via **Reciprocal Rank Fusion**:
 
+```mermaid
+flowchart TD
+    Q([query]) --> BM25["BM25\nsearch_vector @@ websearch_to_tsquery"]
+    Q --> EMB["ONNX embed\nall-MiniLM-L6-v2 · 384d · local"]
+    EMB --> KNN["KNN\nembedding <=> query_vector\ncosine distance"]
+    BM25 --> RRF["RRF fusion\nscore = 1/(k+rank_bm25) + 1/(k+rank_vec)\nk=60"]
+    KNN --> RRF
+    RRF --> R([top-N results])
 ```
-query
-  ├── BM25  (search_vector @@ websearch_to_tsquery)
-  └── KNN   (embedding <=> query_vector, cosine distance)
-        ↓
-   RRF fusion  (score = 1/(k+rank_bm25) + 1/(k+rank_vec), k=60)
-        ↓
-   top-N results
-```
-
-Embeddings are generated locally via **ONNX** (all-MiniLM-L6-v2, 384 dimensions) — no external API calls.
 
 ---
 
