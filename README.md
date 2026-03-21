@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="media/logo.png" alt="Self-hosted MCP memory server with hybrid BM25 + semantic search, backed by PostgreSQL +
+  <img src="media/logo.svg" alt="Self-hosted MCP memory server with hybrid BM25 + semantic search, backed by PostgreSQL +
 pgvector" width="100%">
 </p>
 
