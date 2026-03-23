@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import EmailStr, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,11 +22,11 @@ class Settings(BaseSettings):
     dedup_threshold: float = Field(default=0.95, ge=0.0, le=1.0)
     oauth_jwt_secret: str = "memlord-dev-secret-please-change"
 
-    smtp_host: str = ""
+    smtp_host: str | None = None
     smtp_port: int = 587
-    smtp_user: str = ""
-    smtp_password: str = ""
-    smtp_from: str = ""
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from: EmailStr | None = None
     smtp_tls: bool = True
 
 

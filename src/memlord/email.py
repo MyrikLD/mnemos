@@ -19,7 +19,7 @@ async def send_email(to: str, subject: str, body: str) -> None:
         msg,
         hostname=settings.smtp_host,
         port=settings.smtp_port,
-        username=settings.smtp_user or None,
-        password=settings.smtp_password or None,
+        username=settings.smtp_user,
+        password=settings.smtp_password,
         start_tls=settings.smtp_tls,
     )
