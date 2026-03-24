@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Annotated, NoReturn
 
 from fastapi import Depends, HTTPException, Request
+from starlette import status
 from starlette.templating import Jinja2Templates
 
 from memlord.config import settings
@@ -64,7 +65,8 @@ def require_auth(request: Request) -> int:
 
 def _redirect(request: Request) -> NoReturn:
     raise HTTPException(
-        status_code=307, headers={"Location": f"/ui/login?next={request.url.path}"}
+        status_code=status.HTTP_307_TEMPORARY_REDIRECT,
+        headers={"Location": f"/ui/login?next={request.url.path}"},
     )
 
 
