@@ -28,7 +28,7 @@ def make_session_token(user_id: int) -> str:
     return f"{body}:{sig}"
 
 
-def require_auth(request: Request) -> int:
+def _require_auth(request: Request) -> int:
     """FastAPI dependency: validates session cookie and returns user_id.
 
     Token format: ``{user_id}:{timestamp}:{hmac_sha256}``
@@ -71,7 +71,7 @@ def _redirect(request: Request) -> NoReturn:
 async def get_current_user(
     request: Request,
     s: APISessionDep,
-    uid: int = Depends(require_auth),
+    uid: int = Depends(_require_auth),
 ):
     user = await UserDao(s).get_by_id(uid)
     if user is None:
@@ -79,4 +79,6 @@ async def get_current_user(
     return user
 
 
-UserDep = Annotated[UserInfo, Depends(get_current_user)]
+APIUserDep = Annotated[UserInfo, Depends(get_current_user)]
+
+__all__ = ["APIUserDep", "make_session_token"]
