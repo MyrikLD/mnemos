@@ -125,6 +125,7 @@ Via `pydantic-settings`. Sources in priority order: environment variables (prefi
 | `MEMLORD_RRF_K`            | `60`                                                       | RRF fusion k parameter              |
 | `MEMLORD_DEFAULT_LIMIT`    | `10`                                                       | Default result limit                |
 | `MEMLORD_SIM_THRESHOLD`    | `0.7`                                                      | Default cosine similarity threshold |
+| `MEMLORD_DEDUP_THRESHOLD`  | `0.95`                                                     | Cosine similarity threshold for near-duplicate detection on write |
 | `MEMLORD_OAUTH_JWT_SECRET` | `memlord-dev-secret-please-change`                         | JWT signing secret                  |
 
 ---
@@ -232,7 +233,9 @@ Save a memory entry.
 
 **Logic:** if `workspace` is provided — name lookup, `can_write` check → `workspace_id`. If `null` → personal
 workspace resolved via `get_personal(uid)`. Unique constraint `(content, workspace_id)` — idempotent per workspace.
-`MemoryDao.create` → embedding → tags.
+`MemoryDao.create` → embedding → near-duplicate check → tags.
+
+**Near-duplicate check:** before inserting, computes embedding and finds the closest existing memory in the workspace via `<=>` (cosine distance). If `1 - distance >= dedup_threshold` — raises `ValueError` with the duplicate's `id` and similarity score. Skipped when `force=True`.
 
 **Returns:** `StoreResult` — `id`, `created` (bool).
 
