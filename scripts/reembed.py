@@ -9,22 +9,21 @@ import asyncio
 
 import sqlalchemy as sa
 
-from memlord.db import get_engine
+from memlord.db import session
 from memlord.embeddings import embed
 from memlord.models import Memory
 
 
 async def main() -> None:
-    engine = get_engine()
-    async with engine.begin() as conn:
-        rows = (await conn.execute(sa.select(Memory.id, Memory.content))).fetchall()
+    async with session() as s:
+        rows = (await s.execute(sa.select(Memory.id, Memory.content))).fetchall()
 
     print(f"Re-embedding {len(rows)} memories...")
 
-    async with engine.begin() as conn:
+    async with session() as s:
         for i, (memory_id, content) in enumerate(rows, 1):
             vector = await embed(content)
-            await conn.execute(
+            await s.execute(
                 sa.update(Memory).where(Memory.id == memory_id).values(embedding=vector)
             )
             print(f"  [{i}/{len(rows)}] id={memory_id}")
