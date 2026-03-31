@@ -11,6 +11,7 @@ pgvector" width="100%">
   <a href="https://github.com/MyrikLD/memlord/releases"><img src="https://img.shields.io/github/v/tag/MyrikLD/memlord?label=version&color=green" alt="Version"></a>
   <a href="https://github.com/modelcontextprotocol/servers"><img src="https://img.shields.io/badge/MCP-compatible-purple.svg" alt="MCP"></a>
   <a href="https://github.com/psf/black"><img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black"></a>
+  <a href="https://glama.ai/mcp/servers/MyrikLD/memlord"><img src="https://glama.ai/mcp/servers/MyrikLD/memlord/badges/score.svg" alt="MCP score"></a>
 </p>
 
 <p align="center">
