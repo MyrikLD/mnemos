@@ -246,12 +246,12 @@ document.getElementById('connect-modal').addEventListener('click', function(e) {
 {% if total_pages > 1 %}
 <div class="pagination">
     {% if page > 1 %}
-    <a href="?page={{ page - 1 }}&memory_type={{ memory_type }}&tag={{ tag }}&workspace={{ workspace }}"
+    <a href="?page={{ page - 1 }}&memory_type={{ memory_type or '' }}&tag={{ tag }}&workspace={{ workspace }}"
        class="btn btn-ghost btn-sm">← Prev</a>
     {% endif %}
     <span class="page-info">Page {{ page }} of {{ total_pages }}</span>
     {% if page < total_pages %}
-    <a href="?page={{ page + 1 }}&memory_type={{ memory_type }}&tag={{ tag }}&workspace={{ workspace }}"
+    <a href="?page={{ page + 1 }}&memory_type={{ memory_type or '' }}&tag={{ tag }}&workspace={{ workspace }}"
        class="btn btn-ghost btn-sm">Next →</a>
     {% endif %}
 </div>
