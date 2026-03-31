@@ -11,6 +11,7 @@ from authlib.jose.errors import JoseError
 from fastmcp.server.auth import OAuthProvider
 from fastmcp.server.auth.auth import AccessToken
 from fastmcp.server.auth.jwt_issuer import derive_jwt_key, JWTIssuer
+from fastmcp.server.auth.redirect_validation import matches_allowed_pattern
 from mcp.server.auth.provider import (
     AuthorizationCode,
     AuthorizationParams,
@@ -21,7 +22,7 @@ from mcp.server.auth.provider import (
 )
 from mcp.server.auth.settings import ClientRegistrationOptions, RevocationOptions
 from mcp.shared.auth import OAuthClientInformationFull, OAuthToken
-from pydantic import BaseModel
+from pydantic import AnyUrl, BaseModel
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
@@ -34,6 +35,19 @@ from memlord.models.oauth_client import OAuthClient
 from memlord.models.revoked_token import RevokedToken
 
 logger = logging.getLogger(__name__)
+
+
+class _PatternMatchingClient(OAuthClientInformationFull):
+    """OAuthClientInformationFull that matches redirect_uris by path, ignoring query string."""
+
+    def validate_redirect_uri(self, redirect_uri: AnyUrl | None) -> AnyUrl:
+        if redirect_uri is not None:
+            uri_str = str(redirect_uri)
+            for pattern in self.redirect_uris or []:
+                if matches_allowed_pattern(uri_str, str(pattern)):
+                    return redirect_uri
+        return super().validate_redirect_uri(redirect_uri)
+
 
 ACCESS_TOKEN_TTL = 3600  # 1 hour
 REFRESH_TOKEN_TTL = 30 * 24 * 3600  # 30 days
@@ -391,7 +405,7 @@ class MemlordOAuthProvider(OAuthProvider):
         if data is None:
             return None
 
-        return OAuthClientInformationFull.model_validate(data)
+        return _PatternMatchingClient.model_validate(data)
 
     async def register_client(self, client_info: OAuthClientInformationFull) -> None:
         if client_info.client_id is None:
