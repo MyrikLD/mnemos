@@ -404,6 +404,19 @@ class MemlordOAuthProvider(OAuthProvider):
         )
         data = client_info.model_dump(mode="json")
         async with self.session() as s:
+            existing_data = await s.scalar(
+                sa.select(OAuthClient.data).where(
+                    OAuthClient.client_id == client_info.client_id
+                )
+            )
+            if existing_data:
+                existing_uris: list[str] = existing_data.get("redirect_uris") or []
+                new_uris: list[str] = data.get("redirect_uris") or []
+                merged = list(dict.fromkeys(existing_uris + new_uris))
+                data["redirect_uris"] = merged
+                logger.info(
+                    "register_client merged redirect_uris=%s", merged
+                )
             await s.execute(
                 pg_insert(OAuthClient)
                 .values(client_id=client_info.client_id, data=data)
