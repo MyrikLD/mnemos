@@ -3,7 +3,7 @@
     "memlord-local": {
       "command": "python",
       "args": [
-        "src/memlord/stdio.py",
+        "src/memlord/main.py",
         "--stdio"
       ],
       "env": {
