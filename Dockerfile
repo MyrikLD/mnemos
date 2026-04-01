@@ -1,9 +1,3 @@
-FROM python:3.12-slim AS model-downloader
-WORKDIR /app
-RUN pip install --no-cache-dir huggingface_hub
-COPY scripts/ scripts/
-RUN python scripts/download_model.py
-
 FROM python:3.12-slim AS builder
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 WORKDIR /app
@@ -24,7 +18,6 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/src /app/src
-COPY --from=model-downloader /app/src/memlord/onnx/ /app/src/memlord/onnx/
 COPY migrations/ migrations/
 COPY alembic.ini alembic.ini
 COPY scripts/ scripts/
