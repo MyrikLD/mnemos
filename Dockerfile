@@ -1,6 +1,10 @@
 FROM python:3.12-slim AS builder
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 WORKDIR /app
+
+ARG VERSION=0.0.0
+ENV SETUPTOOLS_SCM_PRETEND_VERSION=${VERSION}
+
 # Copy lockfile first for better layer caching
 COPY pyproject.toml uv.lock ./
 RUN uv sync --no-dev --frozen --no-install-project
@@ -10,6 +14,10 @@ COPY LICENSE* .
 RUN uv sync --no-dev --frozen
 
 FROM python:3.12-slim AS runtime
+
+ARG VERSION=0.0.0
+LABEL org.opencontainers.image.version="${VERSION}"
+
 # libgomp1 is required by onnxruntime
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libgomp1 \
