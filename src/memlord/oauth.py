@@ -10,6 +10,7 @@ import sqlalchemy as sa
 from authlib.jose.errors import JoseError
 from fastmcp.server.auth import OAuthProvider
 from fastmcp.server.auth.auth import AccessToken
+from starlette.middleware import Middleware
 from fastmcp.server.auth.jwt_issuer import derive_jwt_key, JWTIssuer
 from fastmcp.server.auth.redirect_validation import matches_allowed_pattern
 from mcp.server.auth.provider import (
@@ -33,6 +34,7 @@ from memlord.auth import hash_password
 from memlord.dao.user import UserDao
 from memlord.models.oauth_client import OAuthClient
 from memlord.models.revoked_token import RevokedToken
+from memlord.utils.inject_client_id import InjectClientIdMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -211,6 +213,13 @@ class MemlordOAuthProvider(OAuthProvider):
             signing_key=self._signing_key,
         )
         logger.debug("set_mcp_path: JWT audience updated to %s", audience)
+
+    def get_middleware(self) -> list:
+        middlewares = super().get_middleware()
+        middlewares.append(
+            Middleware(InjectClientIdMiddleware, auth_codes=self._auth_codes)  # type: ignore[arg-type]
+        )
+        return middlewares
 
     def get_routes(self, mcp_path: str | None = None) -> list[Route]:
         routes = super().get_routes(mcp_path)
@@ -424,6 +433,8 @@ class MemlordOAuthProvider(OAuthProvider):
             client_info.scope,
         )
         data = client_info.model_dump(mode="json")
+        if data.get("client_name") == "Glama":
+            data["token_endpoint_auth_method"] = "client_secret_basic"
         async with self.session() as s:
             existing_data = await s.scalar(
                 sa.select(OAuthClient.data).where(
