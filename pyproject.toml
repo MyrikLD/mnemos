@@ -53,7 +53,7 @@ packages = ["src/memlord"]
 [tool.coverage.run]
 source = ["src/memlord"]
 parallel = true
-concurrency = ["thread", "greenlet"]
+concurrency = ["thread"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
