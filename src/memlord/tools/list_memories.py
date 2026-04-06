@@ -42,7 +42,7 @@ async def list_memories(
     page_size = min(page_size, 100)
     offset = (page - 1) * page_size
 
-    workspace_ids = await WorkspaceDao(s).get_accessible_workspace_ids(uid)
+    workspace_ids = await WorkspaceDao(s, uid).get_accessible_workspace_ids()
     q = (
         select(*_COLS)
         .join(Workspace, Memory.workspace_id == Workspace.id)

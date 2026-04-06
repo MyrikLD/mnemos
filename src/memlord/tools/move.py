@@ -31,7 +31,7 @@ async def move_memory(
     if memory_id is None:
         raise ValueError(f"Memory with name={name!r} not found")
 
-    ws = await WorkspaceDao(s).get_by_name(workspace, uid)
+    ws = await WorkspaceDao(s, uid).get_by_name(workspace)
     if ws is None:
         raise ValueError(
             f"Workspace '{workspace}' not found or you are not a member. "

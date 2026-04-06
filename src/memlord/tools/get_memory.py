@@ -24,7 +24,7 @@ async def get_memory(
 
     ws_name: str | None = None
     if item.workspace_id is not None:
-        names = await WorkspaceDao(s).get_names_by_ids({item.workspace_id})
+        names = await WorkspaceDao(s, uid).get_names_by_ids({item.workspace_id})
         ws_name = names.get(item.workspace_id)
 
     return MemoryDetail(

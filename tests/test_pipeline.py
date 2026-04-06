@@ -41,6 +41,14 @@ async def test_pipeline(mcp_client):
     assert r.data.content == "updated pipeline memory"
     assert sorted(r.data.tags) == ["pipeline", "updated"]
 
+    # --- retrieve ---
+    r = await mcp_client.call_tool(
+        "retrieve_memory",
+        {"query": "updated pipeline memory", "limit": 10},
+    )
+    names = [m.name for m in r.data]
+    assert mid in names
+
     # --- list_memories ---
     r = await mcp_client.call_tool("list_memories", {"page": 1, "page_size": 50})
     names = [m.name for m in r.data.items]

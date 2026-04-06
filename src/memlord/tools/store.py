@@ -33,18 +33,18 @@ async def store_memory(
                Omit or pass None to store as a personal memory.
     force: skip near-duplicate check and store unconditionally.
     """
-    ws_dao = WorkspaceDao(s)
+    ws_dao = WorkspaceDao(s, uid)
     if workspace is not None:
-        ws = await ws_dao.get_by_name(workspace, uid)
+        ws = await ws_dao.get_by_name(workspace)
         if ws is None:
             raise ValueError(
                 f"Workspace '{workspace}' not found or you are not a member. "
                 "Use list_workspaces() to see available workspaces."
             )
-        if not await ws_dao.can_write(ws.id, uid):
+        if not await ws_dao.can_write(ws.id):
             raise ValueError(f"You don't have write access to workspace '{workspace}'.")
     else:
-        ws = await ws_dao.get_personal(uid)
+        ws = await ws_dao.get_personal()
     workspace_id = ws.id
 
     dao = MemoryDao(s, uid)

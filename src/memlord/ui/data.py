@@ -30,11 +30,11 @@ async def export_memories_ui(
     workspace_id: int,
     user: APIUserDep,
 ) -> Response:
-    ws_dao = WorkspaceDao(s)
-    if not await ws_dao.can_read(workspace_id, user.id):
+    ws_dao = WorkspaceDao(s, user.id)
+    if not await ws_dao.can_read(workspace_id):
         raise HTTPException(status_code=403, detail="No access to this workspace")
 
-    ws = await ws_dao.get_by_id_for_user(workspace_id, user.id)
+    ws = await ws_dao.get_by_id_for_user(workspace_id)
     assert ws is not None
 
     ts = utcnow().strftime("%Y%m%d-%H%M")
@@ -88,16 +88,16 @@ async def import_memories_ui(
     if not isinstance(items, list):
         raise HTTPException(status_code=400, detail="Expected a JSON array")
 
-    ws_dao = WorkspaceDao(s)
+    ws_dao = WorkspaceDao(s, user.id)
     ws_id: int | None = int(workspace_id) if workspace_id else None
     if ws_id is not None:
-        if not await ws_dao.can_write(ws_id, user.id):
+        if not await ws_dao.can_write(ws_id):
             raise HTTPException(
                 status_code=403, detail="No write access to this workspace"
             )
         target_ws_id = ws_id
     else:
-        personal_ws = await ws_dao.get_personal(user.id)
+        personal_ws = await ws_dao.get_personal()
         target_ws_id = personal_ws.id
 
     dao = MemoryDao(s, user.id)

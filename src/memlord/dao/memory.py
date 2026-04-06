@@ -22,6 +22,7 @@ class MemoryDao:
     def __init__(self, s: AsyncSession, uid: int) -> None:
         self._s = s
         self._uid = uid
+        self._ws_dao = WorkspaceDao(s, uid)
 
     async def _upsert_tags(self, memory_id: int, tags: set[str]) -> None:
         for tag_name in tags:
@@ -95,11 +96,11 @@ class MemoryDao:
         )
 
     async def _personal_workspace_id(self) -> int:
-        ws = await WorkspaceDao(self._s).get_personal(self._uid)
+        ws = await self._ws_dao.get_personal()
         return ws.id
 
     async def _accessible_workspace_ids(self) -> list[int]:
-        return await WorkspaceDao(self._s).get_accessible_workspace_ids(self._uid)
+        return await self._ws_dao.get_accessible_workspace_ids()
 
     async def create(
         self,
