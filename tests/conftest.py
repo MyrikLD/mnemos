@@ -9,7 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-from memlord.auth import hash_password, MCPUserDep
+from memlord.auth import MCPUserDep, hash_password
 from memlord.config import settings
 from memlord.dao.user import UserDao
 from memlord.dao.workspace import WorkspaceDao
@@ -79,7 +79,7 @@ async def user_id(session: AsyncSession) -> int:
 @pytest.fixture
 async def workspace_id(session: AsyncSession, user_id: int) -> int:
     """Return the personal workspace id for the test user."""
-    ws = await WorkspaceDao(session).get_personal(user_id)
+    ws = await WorkspaceDao(session, user_id).get_personal()
     return ws.id
 
 
