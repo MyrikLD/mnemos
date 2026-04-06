@@ -16,7 +16,13 @@ async def get_memory(
     s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]
     uid: int = MCPUserDep,  # type: ignore[assignment]
 ) -> MemoryListItem:
-    """Fetch a single memory by ID with full details (tags, metadata)."""
+    """Fetch full content of a single memory by numeric ID.
+
+    Use only when you already know the ID — e.g. after retrieve_memory() or recall_memory()
+    which return IDs in their results alongside compact snippets.
+    Do NOT use for search — use retrieve_memory() for semantic/text search
+    or recall_memory() for time-based queries like 'last week'.
+    """
     result = await MemoryDao(s, uid).get(id)
     if result is None:
         raise ValueError(f"Memory with id={id} not found")
