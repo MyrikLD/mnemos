@@ -31,9 +31,7 @@ class Memory(Base):
     name = sa.Column(sa.Text, nullable=True, index=True)
 
     __table_args__ = (
-        sa.UniqueConstraint(
-            "content", "workspace_id", name="uq_memories_content_workspace"
-        ),
+        sa.UniqueConstraint("content", "workspace_id", name="uq_memories_content_workspace"),
         sa.UniqueConstraint("name", "workspace_id", name="uq_memories_name_workspace"),
         sa.Index("ix_memories_search_vector", "search_vector", postgresql_using="gin"),
         sa.Index(
