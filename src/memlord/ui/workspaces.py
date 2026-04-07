@@ -15,7 +15,7 @@ async def workspaces_list(
     s: APISessionDep,
     user: APIUserDep,
 ) -> HTMLResponse:
-    workspaces = await WorkspaceDao(s).list_workspaces(user_id=user.id)
+    workspaces = await WorkspaceDao(s, user.id).list_workspaces()
     return templates.TemplateResponse(
         request, "workspaces.html", {"user": user, "workspaces": workspaces}
     )
@@ -47,7 +47,7 @@ async def workspace_new_post(
             status_code=400,
         )
     try:
-        ws = await WorkspaceDao(s).create(name=name, owner_id=user.id, description=description_val)
+        ws = await WorkspaceDao(s, user.id).create(name=name, description=description_val)
     except IntegrityError:
         return templates.TemplateResponse(
             request,
@@ -70,8 +70,8 @@ async def workspace_detail(
     s: APISessionDep,
     user: APIUserDep,
 ) -> HTMLResponse:
-    dao = WorkspaceDao(s)
-    ws = await dao.get_by_id_for_user(workspace_id, user.id)
+    dao = WorkspaceDao(s, user.id)
+    ws = await dao.get_by_id_for_user(workspace_id)
     if ws is None:
         raise HTTPException(status_code=404, detail="Workspace not found")
     members = await dao.get_members(workspace_id)
@@ -92,13 +92,13 @@ async def workspace_rename_post(
     name = name.strip()
     if not name:
         raise HTTPException(status_code=400, detail="Name is required")
-    ws = await WorkspaceDao(s).get_by_id_for_user(workspace_id, user.id)
+    ws = await WorkspaceDao(s, user.id).get_by_id_for_user(workspace_id)
     if ws is None:
         raise HTTPException(status_code=404, detail="Workspace not found")
     if ws.is_personal:
         raise HTTPException(status_code=400, detail="Cannot rename a personal workspace")
     try:
-        await WorkspaceDao(s).rename(workspace_id=workspace_id, owner_id=user.id, name=name)
+        await WorkspaceDao(s, user.id).rename(workspace_id=workspace_id, name=name)
     except ValueError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
     return RedirectResponse(f"/ui/workspaces/{workspace_id}", status_code=303)
@@ -111,13 +111,12 @@ async def workspace_description_post(
     user: APIUserDep,
     description: str = Form(default=""),
 ) -> Response:
-    ws = await WorkspaceDao(s).get_by_id_for_user(workspace_id, user.id)
+    ws = await WorkspaceDao(s, user.id).get_by_id_for_user(workspace_id)
     if ws is None:
         raise HTTPException(status_code=404, detail="Workspace not found")
     try:
-        await WorkspaceDao(s).update_description(
+        await WorkspaceDao(s, user.id).update_description(
             workspace_id=workspace_id,
-            owner_id=user.id,
             description=description.strip() or None,
         )
     except ValueError as e:
@@ -133,15 +132,14 @@ async def workspace_invite(
     user: APIUserDep,
     expires_in_hours: int = Form(default=72),
 ) -> HTMLResponse:
-    ws = await WorkspaceDao(s).get_by_id_for_user(workspace_id, user.id)
+    ws = await WorkspaceDao(s, user.id).get_by_id_for_user(workspace_id)
     if ws is None:
         raise HTTPException(status_code=404, detail="Workspace not found")
     if ws.is_personal:
         raise HTTPException(status_code=400, detail="Cannot invite to a personal workspace")
     try:
-        token = await WorkspaceDao(s).create_invite(
+        token = await WorkspaceDao(s, user.id).create_invite(
             workspace_id=workspace_id,
-            created_by=user.id,
             expires_in_hours=expires_in_hours,
         )
     except ValueError as e:
@@ -161,8 +159,8 @@ async def workspace_leave(
     s: APISessionDep,
     user: APIUserDep,
 ) -> Response:
-    dao = WorkspaceDao(s)
-    ws = await dao.get_by_id_for_user(workspace_id, user.id)
+    dao = WorkspaceDao(s, user.id)
+    ws = await dao.get_by_id_for_user(workspace_id)
     if ws is None:
         raise HTTPException(status_code=404, detail="Workspace not found")
     if ws.is_personal:
@@ -180,14 +178,14 @@ async def workspace_delete(
     s: APISessionDep,
     user: APIUserDep,
 ) -> Response:
-    dao = WorkspaceDao(s)
-    ws = await dao.get_by_id_for_user(workspace_id, user.id)
+    dao = WorkspaceDao(s, user.id)
+    ws = await dao.get_by_id_for_user(workspace_id)
     if ws is None:
         raise HTTPException(status_code=404, detail="Workspace not found")
     if ws.is_personal:
         raise HTTPException(status_code=400, detail="Cannot delete a personal workspace")
     try:
-        await dao.delete_workspace(workspace_id=workspace_id, owner_id=user.id)
+        await dao.delete_workspace(workspace_id=workspace_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return RedirectResponse("/ui/workspaces", status_code=303)
@@ -200,7 +198,7 @@ async def join_get(
     s: APISessionDep,
     user: APIUserDep,
 ) -> HTMLResponse:
-    row = await WorkspaceDao(s).get_invite(token)
+    row = await WorkspaceDao(s, user.id).get_invite(token)
     if row is None:
         raise HTTPException(status_code=404, detail="Invalid invite token")
     return templates.TemplateResponse(
@@ -223,7 +221,7 @@ async def join_post(
     user: APIUserDep,
 ) -> Response:
     try:
-        ws = await WorkspaceDao(s).use_invite(token=token, user_id=user.id)
+        ws = await WorkspaceDao(s, user.id).use_invite(token=token)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return RedirectResponse(f"/ui/workspaces/{ws.id}", status_code=303)

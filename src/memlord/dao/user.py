@@ -86,7 +86,7 @@ class UserDao:
             .returning(User.id)
         )
         assert user_id is not None
-        await WorkspaceDao(self._s).create_personal(user_id)
+        await WorkspaceDao(self._s, user_id).create_personal()
         return UserInfo(
             id=user_id,
             display_name=display_name.strip(),

@@ -16,4 +16,4 @@ async def list_workspaces(
     uid: int = MCPUserDep,  # type: ignore[assignment]
 ) -> list[WorkspaceInfo]:
     """List all workspaces you are a member of (personal + shared)."""
-    return await WorkspaceDao(s).list_workspaces(user_id=uid)
+    return await WorkspaceDao(s, uid).list_workspaces()

@@ -59,14 +59,14 @@ async def recall_memory(
             remaining = remaining.replace(date_str, "")
         semantic_query = remaining.strip() or query
 
-    ws_dao = WorkspaceDao(s)
+    ws_dao = WorkspaceDao(s, uid)
     if workspace is not None:
-        ws = await ws_dao.get_by_name(workspace, uid)
+        ws = await ws_dao.get_by_name(workspace)
         if ws is None:
             raise ValueError(f"Workspace {workspace!r} not found or not accessible")
         workspace_ids = [ws.id]
     else:
-        workspace_ids = await ws_dao.get_accessible_workspace_ids(uid)
+        workspace_ids = await ws_dao.get_accessible_workspace_ids()
     results = await hybrid_search(
         s,
         query=semantic_query,

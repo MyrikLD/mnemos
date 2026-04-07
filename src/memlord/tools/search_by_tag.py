@@ -48,7 +48,7 @@ async def search_by_tag(
     if not normalized:
         return MemoryPage()
 
-    workspace_ids = await WorkspaceDao(s).get_accessible_workspace_ids(uid)
+    workspace_ids = await WorkspaceDao(s, uid).get_accessible_workspace_ids()
     access_filter = Memory.workspace_id.in_(workspace_ids)
 
     if operation == "AND":

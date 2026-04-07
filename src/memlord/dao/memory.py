@@ -82,11 +82,11 @@ class MemoryDao:
             )
 
     async def _personal_workspace_id(self) -> int:
-        ws = await WorkspaceDao(self._s).get_personal(self._uid)
+        ws = await WorkspaceDao(self._s, self._uid).get_personal()
         return ws.id
 
     async def _accessible_workspace_ids(self) -> list[int]:
-        return await WorkspaceDao(self._s).get_accessible_workspace_ids(self._uid)
+        return await WorkspaceDao(self._s, self._uid).get_accessible_workspace_ids()
 
     async def create(
         self,
