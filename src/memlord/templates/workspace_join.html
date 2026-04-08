@@ -16,18 +16,28 @@
         <strong>{{ workspace_name }}</strong>
         as <strong>{{ 'read only' if role == 'viewer' else 'read &amp; write' }}</strong>.
     </p>
-    <div x-data="{ error: '' }">
+    <div x-data="joinPage('{{ token }}')">
         <div x-show="error" class="alert alert-error" x-text="error" style="margin-bottom:.75rem"></div>
         <div class="form-actions">
-            <button class="btn btn-primary" @click="
-                fetch('/api/workspaces/join/{{ token }}', { method: 'POST' })
-                    .then(async r => r.ok
-                        ? (window.location.href = '/ui/workspaces/' + (await r.json()).id)
-                        : r.json().then(e => { error = e.detail }))
-            ">Accept invitation</button>
+            <button class="btn btn-primary" @click="accept()">Accept invitation</button>
             <a href="/" class="btn btn-ghost">Decline</a>
         </div>
     </div>
+    <script>
+    function joinPage(token) {
+        return {
+            error: '',
+            async accept() {
+                const r = await fetch('/api/workspaces/join/' + token, { method: 'POST' });
+                if (r.ok) {
+                    window.location.href = '/ui/workspaces/' + (await r.json()).id;
+                } else {
+                    this.error = (await r.json()).detail;
+                }
+            },
+        };
+    }
+    </script>
     {% endif %}
 </div>
 
