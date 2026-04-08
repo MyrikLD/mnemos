@@ -1,130 +1,231 @@
 {% extends "base.html" %}
-{% block title %}{% if workspace.is_personal %}Personal{% else %}{{ workspace.name }}{% endif %} — Memlord{% endblock %}
+{% block title %}Workspace — Memlord{% endblock %}
 {% block content %}
 
-<div class="breadcrumb">
-    <a href="/ui/workspaces" class="btn btn-ghost btn-sm">← Workspaces</a>
-</div>
+<div x-data="workspaceDetailPage({{ workspace_id }})" x-init="init()">
 
-<div class="page-header">
-    <h1 class="page-title">{% if workspace.is_personal %}Personal{% else %}{{ workspace.name }}{% endif %}</h1>
-    <span class="badge badge-type">{{ workspace.role }}</span>
-</div>
+    <div class="breadcrumb">
+        <a href="/ui/workspaces" class="btn btn-ghost btn-sm">← Workspaces</a>
+    </div>
 
-{% if workspace.role == 'owner' and not workspace.is_personal %}
-<div class="detail-card">
-    <div class="section-title">Name</div>
-    <form method="post" action="/ui/workspaces/{{ workspace.id }}/rename">
-        <input class="form-input" name="name" type="text" value="{{ workspace.name }}"
-               required style="margin-bottom:.75rem">
-        <button type="submit" class="btn btn-primary btn-sm">Rename</button>
-    </form>
-</div>
-{% endif %}
-{% if not workspace.is_personal %}
-<div class="detail-card">
-    <div class="section-title">Description</div>
-    {% if workspace.role == 'owner' %}
-    <form method="post" action="/ui/workspaces/{{ workspace.id }}/description">
-        <textarea class="form-input" name="description" rows="3"
-                  placeholder="What is this workspace for? What kind of memories go here?"
-                  style="margin-bottom:.75rem">{{ workspace.description or '' }}</textarea>
-        <button type="submit" class="btn btn-primary btn-sm">Save</button>
-    </form>
-    {% else %}
-    <p style="font-size:.875rem;color:var(--text-3);margin:0">
-        {{ workspace.description or 'No description.' }}
-    </p>
-    {% endif %}
-</div>
-{% endif %}
+    <div x-show="loading" style="text-align:center;padding:3rem;color:var(--text-4)">Loading…</div>
 
-{% if not workspace.is_personal %}
-<div class="detail-card">
-    <div class="section-title">Members ({{ workspace.member_count }})</div>
-    {% for m in members %}
-    <div style="display:flex;align-items:center;gap:.75rem;padding:.5rem 0;border-bottom:1px solid var(--border)">
-        <div style="flex:1;min-width:0">
-            <div style="font-size:.875rem;font-weight:500">{{ m.display_name }}</div>
-            <div style="font-size:.75rem;color:var(--text-4)">{{ m.email }}</div>
+    <template x-if="!loading && ws">
+        <div>
+            <div class="page-header">
+                <h1 class="page-title" x-text="ws.is_personal ? 'Personal' : ws.name"></h1>
+                <span class="badge badge-type" x-text="ws.role"></span>
+            </div>
+
+            <div x-show="successMsg" class="alert alert-success" x-text="successMsg"></div>
+            <div x-show="errorMsg" class="alert alert-error" x-text="errorMsg"></div>
+
+            <!-- Import result -->
+            <div x-show="importResult !== null" class="alert alert-success">
+                Imported <strong x-text="importResult && importResult.imported"></strong> memories
+                <template x-if="importResult && importResult.skipped > 0">
+                    <span> · skipped <span x-text="importResult.skipped"></span></span>
+                </template>
+            </div>
+
+            <!-- Rename (owner only, non-personal) -->
+            <template x-if="ws.role === 'owner' && !ws.is_personal">
+                <div class="detail-card">
+                    <div class="section-title">Name</div>
+                    <input class="form-input" type="text" x-model="editName" required style="margin-bottom:.75rem">
+                    <button class="btn btn-primary btn-sm" @click="rename()">Rename</button>
+                </div>
+            </template>
+
+            <!-- Description (non-personal) -->
+            <template x-if="!ws.is_personal">
+                <div class="detail-card">
+                    <div class="section-title">Description</div>
+                    <template x-if="ws.role === 'owner'">
+                        <div>
+                            <textarea class="form-input" x-model="editDescription" rows="3"
+                                      placeholder="What is this workspace for? What kind of memories go here?"
+                                      style="margin-bottom:.75rem"></textarea>
+                            <button class="btn btn-primary btn-sm" @click="saveDescription()">Save</button>
+                        </div>
+                    </template>
+                    <template x-if="ws.role !== 'owner'">
+                        <p style="font-size:.875rem;color:var(--text-3);margin:0" x-text="ws.description || 'No description.'"></p>
+                    </template>
+                </div>
+            </template>
+
+            <!-- Members (non-personal) -->
+            <template x-if="!ws.is_personal">
+                <div class="detail-card">
+                    <div class="section-title" x-text="'Members (' + members.length + ')'"></div>
+                    <template x-for="m in members" :key="m.user_id">
+                        <div style="display:flex;align-items:center;gap:.75rem;padding:.5rem 0;border-bottom:1px solid var(--border)">
+                            <div style="flex:1;min-width:0">
+                                <div style="font-size:.875rem;font-weight:500" x-text="m.display_name"></div>
+                                <div style="font-size:.75rem;color:var(--text-4)" x-text="m.email"></div>
+                            </div>
+                            <span class="badge badge-type" x-text="m.role"></span>
+                            <span style="font-size:.6875rem;color:var(--text-4)" x-text="m.joined_at.slice(0,10)"></span>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <!-- Data export/import -->
+            <div class="detail-card">
+                <div class="section-title">Data</div>
+                <p style="font-size:.875rem;color:var(--text-3);margin-bottom:1rem">
+                    Export all memories in this workspace as JSON, or import memories from a JSON file.
+                </p>
+                <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+                    <a :href="'/api/workspaces/' + ws.id + '/export'" class="btn btn-ghost btn-sm">Export JSON</a>
+                    <template x-if="ws.role === 'owner' || ws.role === 'editor'">
+                        <label class="btn btn-ghost btn-sm" style="cursor:pointer">
+                            Import JSON
+                            <input type="file" accept=".json,application/json" style="display:none"
+                                   @change="importFile($event)">
+                        </label>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Invite link (non-personal) -->
+            <template x-if="!ws.is_personal">
+                <div class="detail-card">
+                    <div class="section-title">Invite link</div>
+                    <p style="font-size:.875rem;color:var(--text-3);margin-bottom:1rem">
+                        Generate a one-time invite link (valid for 72 hours) and share it with someone to join this workspace.
+                    </p>
+                    <template x-if="inviteUrl">
+                        <div class="alert alert-success" style="margin-bottom:1rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+                            <span style="font-size:.8125rem;word-break:break-all;flex:1" x-text="inviteUrl"></span>
+                            <button class="btn btn-ghost btn-sm" @click="copyInvite()" x-text="copiedInvite ? 'Copied!' : 'Copy'"></button>
+                        </div>
+                    </template>
+                    <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+                        <select class="form-input" x-model="inviteRole" style="width:auto">
+                            <option value="viewer">Read only</option>
+                            <option value="editor">Read &amp; write</option>
+                        </select>
+                        <button class="btn btn-primary" @click="generateInvite()">Generate invite link</button>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Danger zone -->
+            <template x-if="!ws.is_personal">
+                <template x-if="ws.role === 'owner'">
+                    <div class="detail-card" style="border-color:var(--danger-border)">
+                        <div class="section-title" style="color:var(--danger-text)">Danger zone</div>
+                        <p style="font-size:.875rem;color:var(--text-3);margin-bottom:1rem">
+                            Deleting this workspace is permanent. All memories in this workspace will be deleted.
+                        </p>
+                        <button class="btn btn-danger" @click="deleteWorkspace()">Delete workspace</button>
+                    </div>
+                </template>
+                <template x-if="ws.role !== 'owner'">
+                    <div class="detail-card">
+                        <div class="section-title">Leave workspace</div>
+                        <button class="btn btn-danger" @click="leaveWorkspace()">Leave workspace</button>
+                    </div>
+                </template>
+            </template>
         </div>
-        <span class="badge badge-type">{{ m.role }}</span>
-        <span style="font-size:.6875rem;color:var(--text-4)">{{ m.joined_at.strftime('%Y-%m-%d') }}</span>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
+    </template>
 
-{% if request.query_params.get('imported') is not none %}
-<div class="alert alert-success">
-    Imported <strong>{{ request.query_params.get('imported') }}</strong> memories
-    {% if request.query_params.get('skipped', '0') != '0' %}
-    · skipped {{ request.query_params.get('skipped') }}
-    {% endif %}
-</div>
-{% endif %}
-
-<div class="detail-card">
-    <div class="section-title">Data</div>
-    <p style="font-size:.875rem;color:var(--text-3);margin-bottom:1rem">
-        Export all memories in this workspace as JSON, or import memories from a JSON file.
-    </p>
-    <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-        <a href="/ui/export?workspace_id={{ workspace.id }}" class="btn btn-ghost btn-sm">Export JSON</a>
-        {% if workspace.role in ['owner', 'editor'] %}
-        <form method="post" action="/ui/import" enctype="multipart/form-data" style="display:inline">
-            <input type="hidden" name="workspace_id" value="{{ workspace.id }}">
-            <label class="btn btn-ghost btn-sm" style="cursor:pointer">
-                Import JSON
-                <input type="file" name="file" accept=".json,application/json"
-                       style="display:none" onchange="this.form.submit()">
-            </label>
-        </form>
-        {% endif %}
-    </div>
 </div>
 
-{% if not workspace.is_personal %}
-<div class="detail-card">
-    <div class="section-title">Invite link</div>
-    <p style="font-size:.875rem;color:var(--text-3);margin-bottom:1rem">
-        Generate a one-time invite link (valid for 72 hours) and share it with someone to join this workspace.
-    </p>
-    <div id="invite-result"></div>
-    <form hx-post="/ui/workspaces/{{ workspace.id }}/invite"
-          hx-target="#invite-result"
-          hx-swap="innerHTML"
-          style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-        <select name="role" class="form-input" style="width:auto">
-            <option value="viewer">Read only</option>
-            <option value="editor">Read &amp; write</option>
-        </select>
-        <button type="submit" class="btn btn-primary">Generate invite link</button>
-    </form>
-</div>
-{% endif %}
+<script>
+function workspaceDetailPage(workspaceId) {
+    const params = new URLSearchParams(window.location.search);
+    return {
+        ws: null,
+        members: [],
+        loading: true,
+        successMsg: '',
+        errorMsg: '',
+        editName: '',
+        editDescription: '',
+        inviteRole: 'viewer',
+        inviteUrl: '',
+        copiedInvite: false,
+        importResult: null,
 
-{% if not workspace.is_personal %}
-    {% if workspace.role == 'owner' %}
-    <div class="detail-card" style="border-color:var(--danger-border)">
-        <div class="section-title" style="color:var(--danger-text)">Danger zone</div>
-        <p style="font-size:.875rem;color:var(--text-3);margin-bottom:1rem">
-            Deleting this workspace is permanent. All memories in this workspace will be deleted.
-        </p>
-        <form method="post" action="/ui/workspaces/{{ workspace.id }}/delete"
-              onsubmit="return confirm('Delete workspace &quot;{{ workspace.name }}&quot;? This cannot be undone.')">
-            <button type="submit" class="btn btn-danger">Delete workspace</button>
-        </form>
-    </div>
-    {% else %}
-    <div class="detail-card">
-        <div class="section-title">Leave workspace</div>
-        <form method="post" action="/ui/workspaces/{{ workspace.id }}/leave"
-              onsubmit="return confirm('Leave this workspace?')">
-            <button type="submit" class="btn btn-danger">Leave workspace</button>
-        </form>
-    </div>
-    {% endif %}
-{% endif %}
+        async init() {
+            const r = await fetch('/api/workspaces/' + workspaceId);
+            if (!r.ok) { this.loading = false; return; }
+            const data = await r.json();
+            this.ws = data.workspace;
+            this.members = data.members;
+            this.editName = this.ws.name;
+            this.editDescription = this.ws.description || '';
+            this.loading = false;
+        },
+
+        async rename() {
+            const r = await fetch('/api/workspaces/' + workspaceId + '/rename', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: this.editName }),
+            });
+            if (r.ok) { this.ws = await r.json(); this.successMsg = 'Renamed.'; this.errorMsg = ''; }
+            else { const e = await r.json(); this.errorMsg = e.detail; }
+        },
+
+        async saveDescription() {
+            const r = await fetch('/api/workspaces/' + workspaceId + '/description', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ description: this.editDescription || null }),
+            });
+            if (r.ok) { this.ws = await r.json(); this.successMsg = 'Saved.'; this.errorMsg = ''; }
+            else { const e = await r.json(); this.errorMsg = e.detail; }
+        },
+
+        async generateInvite() {
+            const r = await fetch('/api/workspaces/' + workspaceId + '/invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: this.inviteRole, expires_in_hours: 72 }),
+            });
+            if (r.ok) { const data = await r.json(); this.inviteUrl = data.invite_url; this.copiedInvite = false; }
+            else { const e = await r.json(); this.errorMsg = e.detail; }
+        },
+
+        copyInvite() {
+            navigator.clipboard.writeText(this.inviteUrl).then(() => {
+                this.copiedInvite = true;
+                setTimeout(() => { this.copiedInvite = false; }, 2000);
+            });
+        },
+
+        async deleteWorkspace() {
+            if (!confirm('Delete workspace "' + this.ws.name + '"? This cannot be undone.')) return;
+            const r = await fetch('/api/workspaces/' + workspaceId, { method: 'DELETE' });
+            if (r.ok) window.location.href = '/ui/workspaces';
+            else { const e = await r.json(); this.errorMsg = e.detail; }
+        },
+
+        async importFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const fd = new FormData();
+            fd.append('file', file);
+            const r = await fetch('/api/workspaces/' + workspaceId + '/import', { method: 'POST', body: fd });
+            if (r.ok) { this.importResult = await r.json(); this.errorMsg = ''; }
+            else { const e = await r.json(); this.errorMsg = e.detail; }
+            event.target.value = '';
+        },
+
+        async leaveWorkspace() {
+            if (!confirm('Leave this workspace?')) return;
+            const r = await fetch('/api/workspaces/' + workspaceId + '/leave', { method: 'POST' });
+            if (r.ok) window.location.href = '/ui/workspaces';
+            else { const e = await r.json(); this.errorMsg = e.detail; }
+        },
+    };
+}
+</script>
 
 {% endblock %}

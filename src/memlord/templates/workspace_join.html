@@ -16,12 +16,18 @@
         <strong>{{ workspace_name }}</strong>
         as <strong>{{ 'read only' if role == 'viewer' else 'read &amp; write' }}</strong>.
     </p>
-    <form method="post" action="/ui/join/{{ token }}">
+    <div x-data="{ error: '' }">
+        <div x-show="error" class="alert alert-error" x-text="error" style="margin-bottom:.75rem"></div>
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Accept invitation</button>
+            <button class="btn btn-primary" @click="
+                fetch('/api/workspaces/join/{{ token }}', { method: 'POST' })
+                    .then(async r => r.ok
+                        ? (window.location.href = '/ui/workspaces/' + (await r.json()).id)
+                        : r.json().then(e => { error = e.detail }))
+            ">Accept invitation</button>
             <a href="/" class="btn btn-ghost">Decline</a>
         </div>
-    </form>
+    </div>
     {% endif %}
 </div>
 
