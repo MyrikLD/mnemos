@@ -1,0 +1,49 @@
+from pydantic import BaseModel
+
+
+class MemoriesFilter(BaseModel):
+    page: int = 1
+    page_size: int = 20
+    memory_type: str | None = None
+    tag: str = ""
+    workspace: str = ""
+
+
+class WorkspaceSimple(BaseModel):
+    id: int
+    name: str
+    is_personal: bool
+
+
+class MemoryItem(BaseModel):
+    id: int
+    content: str
+    memory_type: str | None
+    created_at: str
+    workspace_id: int | None
+    workspace_name: str | None
+    tags: list[str]
+
+
+class MemoryDetail(BaseModel):
+    id: int
+    content: str
+    memory_type: str | None
+    created_at: str
+    workspace_id: int | None
+    workspace_name: str | None
+    tags: list[str]
+    metadata: dict | None
+    writable_workspaces: list[WorkspaceSimple]
+
+
+class MemoriesResponse(BaseModel):
+    memories: list[MemoryItem]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+class MoveRequest(BaseModel):
+    to_workspace_id: int

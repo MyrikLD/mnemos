@@ -1,13 +1,167 @@
 {% extends "base.html" %}
-{% block title %}Memlord — Memory #{{ memory.id }}{% endblock %}
+{% block title %}Memlord — Memory{% endblock %}
 {% block content %}
 
-<div class="breadcrumb">
-    <a href="/" class="btn btn-ghost btn-sm">← All memories</a>
+<div x-data="memoryPage({{ workspace_id }}, {{ memory_id }})" x-init="init()">
+
+    <div class="breadcrumb">
+        <a href="/" class="btn btn-ghost btn-sm">← All memories</a>
+    </div>
+
+    <div x-show="loading" style="text-align:center;padding:3rem;color:var(--text-4)">Loading…</div>
+
+    <template x-if="!loading && memory">
+
+        <div>
+            <div x-show="successMsg" class="alert alert-success" x-text="successMsg"></div>
+            <div x-show="errorMsg" class="alert alert-error" x-text="errorMsg"></div>
+
+            <div class="detail-card">
+                <div x-show="memory.workspace_name"
+                     style="font-size:.75rem;font-weight:600;color:#6366f1;margin-bottom:.75rem;letter-spacing:.03em">
+                    ⬡ <span x-text="memory.workspace_name"></span>
+                </div>
+                <div style="margin-bottom:1.25rem">
+                    <div class="detail-label">Content</div>
+                    <div class="detail-content" x-text="memory.content"></div>
+                </div>
+                <div class="detail-meta">
+                    <template x-if="memory.memory_type">
+                        <span class="badge badge-type" x-text="memory.memory_type"></span>
+                    </template>
+                    <template x-for="t in memory.tags" :key="t">
+                        <a :href="'/?tag=' + t" class="tag" x-text="'#' + t"></a>
+                    </template>
+                    <span class="card-date" style="margin-left:auto" x-text="memory.created_at"></span>
+                </div>
+                <template x-if="memory.metadata && Object.keys(memory.metadata).length > 0">
+                    <div style="margin-top:1.25rem">
+                        <div class="detail-label">Metadata</div>
+                        <pre class="meta-json" x-text="JSON.stringify(memory.metadata, null, 2)"></pre>
+                    </div>
+                </template>
+            </div>
+
+            <template x-if="memory.writable_workspaces && memory.writable_workspaces.length > 0">
+                <div class="detail-card">
+                    <div class="section-title">Move to workspace</div>
+                    <div style="display:flex;gap:.5rem;align-items:center">
+                        <select class="form-input" x-model="moveTarget" style="flex:1">
+                            <template x-for="ws in memory.writable_workspaces" :key="ws.id">
+                                <option :value="ws.id" x-text="ws.is_personal ? 'Personal' : ws.name"></option>
+                            </template>
+                        </select>
+                        <button class="btn-primary-sm" @click="moveMemory()">Move</button>
+                    </div>
+                </div>
+            </template>
+
+            <div class="detail-card">
+                <div class="section-title">Edit memory</div>
+                <div class="form-group">
+                    <label class="form-label">Content</label>
+                    <textarea class="form-textarea" x-model="editContent" rows="6"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select class="form-input" x-model="editType">
+                        <template x-for="t in ['fact','preference','instruction','feedback']" :key="t">
+                            <option :value="t" x-text="t"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tags <span class="form-hint">— comma-separated</span></label>
+                    <input class="form-input" x-model="editTags" placeholder="tag1, tag2">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Metadata <span class="form-hint">— JSON object</span></label>
+                    <textarea class="form-textarea form-mono" x-model="editMetadata" rows="4" placeholder="{}"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button class="btn-primary-sm" @click="saveMemory()">Save changes</button>
+                    <button class="btn-danger-sm" @click="deleteMemory()">Delete memory</button>
+                </div>
+            </div>
+        </div>
+
+    </template>
+
 </div>
 
-<div id="page-content">
-    {% include "_memory_content.html" %}
-</div>
+<script>
+function memoryPage(workspaceId, memoryId) {
+    return {
+        memory: null,
+        loading: true,
+        successMsg: '',
+        errorMsg: '',
+        editContent: '',
+        editType: '',
+        editTags: '',
+        editMetadata: '',
+        moveTarget: null,
+
+        async init() {
+            const r = await fetch('/api/memories/' + workspaceId + '/' + memoryId);
+            if (!r.ok) { this.loading = false; return; }
+            this.memory = await r.json();
+            this.editContent = this.memory.content;
+            this.editType = this.memory.memory_type || 'fact';
+            this.editTags = this.memory.tags.join(', ');
+            this.editMetadata = this.memory.metadata ? JSON.stringify(this.memory.metadata, null, 2) : '';
+            if (this.memory.writable_workspaces.length > 0) {
+                this.moveTarget = this.memory.writable_workspaces[0].id;
+            }
+            this.loading = false;
+        },
+
+        async saveMemory() {
+            let metadata = null;
+            if (this.editMetadata.trim()) {
+                try { metadata = JSON.parse(this.editMetadata); }
+                catch { this.errorMsg = 'Invalid JSON in metadata field.'; return; }
+            }
+            const tags = this.editTags ? this.editTags.split(',').map(t => t.trim()).filter(Boolean) : [];
+            const r = await fetch('/api/memories/' + this.memory.workspace_id + '/' + this.memory.id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: this.editContent, memory_type: this.editType, tags, metadata }),
+            });
+            if (r.ok) {
+                this.memory = await r.json();
+                this.editTags = this.memory.tags.join(', ');
+                this.successMsg = 'Saved.';
+                this.errorMsg = '';
+            } else {
+                const err = await r.json();
+                this.errorMsg = err.detail || 'Save failed.';
+            }
+        },
+
+        async moveMemory() {
+            const r = await fetch('/api/memories/' + this.memory.workspace_id + '/' + this.memory.id + '/move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ to_workspace_id: parseInt(this.moveTarget) }),
+            });
+            if (r.ok) {
+                this.memory = await r.json();
+                this.successMsg = 'Moved.';
+                this.errorMsg = '';
+            } else {
+                const err = await r.json();
+                this.errorMsg = err.detail || 'Move failed.';
+            }
+        },
+
+        async deleteMemory() {
+            if (!confirm('Delete this memory?')) return;
+            const r = await fetch('/api/memories/' + this.memory.workspace_id + '/' + this.memory.id, { method: 'DELETE' });
+            if (r.ok) window.location.href = '/';
+        },
+    };
+}
+</script>
 
 {% endblock %}
