@@ -1,5 +1,6 @@
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
+from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from memlord.auth import MCPUserDep
@@ -20,17 +21,15 @@ async def store_memory(
     memory_type: MemoryType,
     tags: set[str] = None,
     metadata: dict = None,
-    workspace: str = None,
-    force: bool = False,
+    workspace: str = Field(
+        None,
+        description="Name of the workspace to store into (must be a member). Omit or pass None to store as a personal memory.",
+    ),
+    force: bool = Field(False, description="Skip near-duplicate check and store unconditionally."),
     s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]
     uid: int = MCPUserDep,  # type: ignore[assignment]
 ) -> StoreResult:
-    """Save a new memory. Idempotent: returns existing if content already stored.
-
-    workspace: name of the workspace to store into (must be a member).
-               Omit or pass None to store as a personal memory.
-    force: skip near-duplicate check and store unconditionally.
-    """
+    """Save a new memory. Idempotent: returns existing if content already stored."""
     ws_dao = WorkspaceDao(s, uid)
     if workspace is not None:
         ws = await ws_dao.get_by_name(workspace)
