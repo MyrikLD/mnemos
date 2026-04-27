@@ -7,7 +7,7 @@ from .memory_type import MemoryType
 
 class SearchResult(BaseModel):
     id: int
-    name: str | None
+    name: str
     content: str
     memory_type: MemoryType
     rrf_score: float
@@ -16,7 +16,7 @@ class SearchResult(BaseModel):
 
 
 class MemoryResult(BaseModel):
-    name: str | None
+    name: str
     memory_type: MemoryType
     tags: set[str]
     metadata: dict

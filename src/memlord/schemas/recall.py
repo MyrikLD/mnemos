@@ -6,7 +6,7 @@ from .memory_type import MemoryType
 
 
 class RecallResult(BaseModel):
-    name: str | None
+    name: str
     memory_type: MemoryType | None
     tags: set[str]
     created_at: NaiveDatetime

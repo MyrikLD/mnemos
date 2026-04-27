@@ -182,6 +182,7 @@ async def export_memories(
             await s.execute(
                 select(
                     Memory.id,
+                    Memory.name,
                     Memory.content,
                     Memory.memory_type,
                     Memory.created_at,
@@ -237,6 +238,7 @@ async def import_memories(
             memory_type=parsed.memory_type,
             metadata=parsed.metadata,
             tags=parsed.tags,
+            name=parsed.name,
             workspace_id=workspace_id,
             force=True,
         )

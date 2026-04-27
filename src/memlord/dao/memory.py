@@ -106,9 +106,9 @@ class MemoryDao:
         memory_type: MemoryType,
         metadata: dict,
         tags: set[str],
+        name: str,
         workspace_id: int | None = None,
         force: bool = False,
-        name: str | None = None,
     ) -> tuple[int, bool]:
         if workspace_id is None:
             workspace_id = await self._personal_workspace_id()
@@ -157,8 +157,8 @@ class MemoryDao:
         metadata: dict = _UNSET,  # type: ignore[assignment]
         tags: set[str] = _UNSET,  # type: ignore[assignment]
         name: str | None = _UNSET,  # type: ignore[assignment]
-    ) -> tuple[int, str | None]:
-        """Update memory fields. Pass _UNSET to leave a field unchanged; None sets it to NULL."""
+    ) -> tuple[int, str]:
+        """Update memory fields. Pass _UNSET to leave a field unchanged."""
         if workspace_id is None:
             workspace_id = await self._personal_workspace_id()
         else:
@@ -198,10 +198,10 @@ class MemoryDao:
         if tags is not _UNSET:
             await self._replace_tags(memory_id, tags)
 
-        final_name: str | None = (
+        final_name: str = (
             values["name"]
             if "name" in values
-            else await self._s.scalar(select(Memory.name).where(Memory.id == memory_id))
+            else await self._s.scalar(select(Memory.name).where(Memory.id == memory_id))  # type: ignore[assignment]
         )
         return memory_id, final_name
 

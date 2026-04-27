@@ -20,6 +20,7 @@ async def memory_id(session, user_id: int, workspace_id: int) -> int:
         memory_type=MemoryType.fact,
         metadata={},
         tags={"x"},
+        name="move me",
         workspace_id=workspace_id,
     )
     return mid
@@ -59,6 +60,7 @@ async def test_move_duplicate_content_raises(
         memory_type=MemoryType.fact,
         metadata={},
         tags=set(),
+        name="move me",
         workspace_id=other_workspace_id,
     )
     with pytest.raises(ValueError, match="already exists"):

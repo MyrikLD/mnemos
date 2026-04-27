@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from .memory_type import MemoryType
 from ..utils.dt import utcnow
@@ -9,11 +9,19 @@ from ..utils.dt import utcnow
 class ImportItem(BaseModel):
     content: str
     memory_type: MemoryType
-    tags: set[str] = Field(default_factory=list)
+    name: str
+    tags: set[str] = Field(default_factory=set)
     metadata: dict = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=utcnow)
 
+    @model_validator(mode="before")
+    @classmethod
+    def fill_name(cls, data: dict) -> dict:
+        if not data.get("name"):
+            data["name"] = (data.get("content") or "")[:60].strip()
+        return data
+
 
 class StoreResult(BaseModel):
-    name: str | None
+    name: str
     created: bool

@@ -9,7 +9,7 @@ class MemoryListItem(BaseModel):
     """Full memory record — used by UI and DAO."""
 
     id: int
-    name: str | None = None
+    name: str
     content: str
     memory_type: MemoryType
     metadata: dict = Field(default_factory=dict)
@@ -27,7 +27,7 @@ class MemoryItem(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    name: str | None = None
+    name: str
     memory_type: MemoryType
     metadata: dict = Field(default_factory=dict)
     tags: set[str]
@@ -42,7 +42,7 @@ class MemoryItem(BaseModel):
 class MemoryDetail(BaseModel):
     """Full memory record returned by get_memory MCP tool."""
 
-    name: str | None = None
+    name: str
     content: str
     memory_type: MemoryType
     metadata: dict = Field(default_factory=dict)
