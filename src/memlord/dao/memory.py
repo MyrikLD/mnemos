@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any
 
+import sqlalchemy as sa
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import Float, bindparam, delete, insert, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -11,7 +12,6 @@ from memlord.dao.workspace import WorkspaceDao
 from memlord.embeddings import embed
 from memlord.models import Memory, MemoryTag, Tag
 from memlord.schemas import MemoryListItem, MemoryType
-import sqlalchemy as sa
 
 _UNSET: Any = object()
 
@@ -258,7 +258,6 @@ class MemoryDao:
         memory_id: int = row["id"]
         tags = (await self.fetch_tags([memory_id])).get(memory_id, set())
         return MemoryListItem(**row, tags=tags)
-
 
     async def move(self, id: int, from_workspace_id: int, to_workspace_id: int) -> None:
         """Move memory to a different workspace. Raises ValueError if not found or duplicate."""

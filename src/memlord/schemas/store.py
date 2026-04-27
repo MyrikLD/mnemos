@@ -2,8 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, model_validator
 
-from .memory_type import MemoryType
 from ..utils.dt import utcnow
+from .memory_type import MemoryType
 
 
 class ImportItem(BaseModel):
