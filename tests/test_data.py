@@ -17,14 +17,16 @@ async def test_export_import(api_client, workspace_id):
         },
     ]
     resp = await api_client.post(
-        "/ui/import",
+        f"/api/workspaces/{workspace_id}/import",
         files={"file": ("m.json", json.dumps(items).encode(), "application/json")},
-        data={"workspace_id": str(workspace_id)},
     )
-    assert resp.status_code == 303
-    assert "imported=2" in resp.headers["location"]
+    assert resp.status_code == 200
+    result = resp.json()
+    assert result["imported"] == 2
+    assert result["skipped"] == 0
 
-    resp = await api_client.get(f"/ui/export?workspace_id={workspace_id}")
+    resp = await api_client.get(f"/api/workspaces/{workspace_id}/export")
+    assert resp.status_code == 200
     data = resp.json()
     for i in data:
         del i["created_at"]

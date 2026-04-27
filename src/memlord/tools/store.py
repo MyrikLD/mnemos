@@ -1,5 +1,6 @@
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
+from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from memlord.auth import MCPUserDep
@@ -21,8 +22,11 @@ async def store_memory(
     name: str,
     tags: set[str] | None = None,
     metadata: dict | None = None,
-    workspace: str | None = None,
-    force: bool = False,
+    workspace: str | None = Field(
+        None,
+        description="Name of the workspace to store into (must be a member). Omit or pass None to store as a personal memory.",
+    ),
+    force: bool = Field(False, description="Skip near-duplicate check and store unconditionally."),
     s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]
     uid: int = MCPUserDep,  # type: ignore[assignment]
 ) -> StoreResult:
@@ -51,7 +55,7 @@ async def store_memory(
         content=content,
         memory_type=memory_type,
         metadata=metadata or {},
-        tags=tags or [],
+        tags=tags or set(),
         workspace_id=workspace_id,
         force=force,
         name=name,

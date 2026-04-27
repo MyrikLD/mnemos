@@ -6,24 +6,26 @@
     <a href="/ui/workspaces" class="btn btn-ghost btn-sm">← Workspaces</a>
 </div>
 
-<div class="detail-card" style="max-width:480px">
+<div class="detail-card" style="max-width:480px" x-data="newWorkspacePage()">
+
     <h1 class="page-title" style="margin-bottom:1.25rem">New workspace</h1>
 
-    {% if error %}
-    <div class="alert alert-error">{{ error }}</div>
-    {% endif %}
+    <div x-show="error" class="alert alert-error" x-text="error"></div>
 
-    <form method="post" action="/ui/workspaces/new">
+    <form @submit.prevent="submit()">
         <div class="form-group">
             <label class="form-label" for="name">Name</label>
-            <input class="form-input" id="name" name="name" type="text"
+            <input class="form-input" id="name" type="text"
                    placeholder="e.g. Team Shared Notes" autofocus
-                   value="{{ name | default('') }}">
+                   x-model="name">
         </div>
         <div class="form-group">
-            <label class="form-label" for="description">Description <span style="color:var(--text-4);font-weight:400">(optional)</span></label>
-            <textarea class="form-input" id="description" name="description" rows="3"
-                      placeholder="What is this workspace for? What kind of memories go here?">{{ description | default('') }}</textarea>
+            <label class="form-label" for="description">
+                Description <span style="color:var(--text-4);font-weight:400">(optional)</span>
+            </label>
+            <textarea class="form-input" id="description" rows="3"
+                      placeholder="What is this workspace for? What kind of memories go here?"
+                      x-model="description"></textarea>
         </div>
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Create</button>
@@ -31,5 +33,31 @@
         </div>
     </form>
 </div>
+
+<script>
+function newWorkspacePage() {
+    return {
+        name: '',
+        description: '',
+        error: '',
+
+        async submit() {
+            this.error = '';
+            const r = await fetch('/api/workspaces', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: this.name.trim(), description: this.description.trim() || null }),
+            });
+            if (r.ok) {
+                const ws = await r.json();
+                window.location.href = '/ui/workspaces/' + ws.id;
+            } else {
+                const e = await r.json();
+                this.error = e.detail || 'Failed to create workspace.';
+            }
+        },
+    };
+}
+</script>
 
 {% endblock %}

@@ -58,7 +58,7 @@ async def test_move_duplicate_content_raises(
         content="move me",
         memory_type=MemoryType.fact,
         metadata={},
-        tags=[],
+        tags=set(),
         workspace_id=other_workspace_id,
     )
     with pytest.raises(ValueError, match="already exists"):

@@ -7,7 +7,6 @@ from pydantic import BaseModel
 class WorkspaceRole(StrEnum):
     owner = "owner"
     editor = "editor"
-    member = "member"
     viewer = "viewer"
 
 
@@ -26,3 +25,37 @@ class WorkspaceMemberInfo(BaseModel):
     email: str
     role: WorkspaceRole
     joined_at: datetime
+
+
+class WorkspaceDetailResponse(BaseModel):
+    workspace: WorkspaceInfo
+    members: list[WorkspaceMemberInfo]
+
+
+class CreateWorkspaceRequest(BaseModel):
+    name: str
+    description: str | None = None
+
+
+class RenameRequest(BaseModel):
+    name: str
+
+
+class DescriptionRequest(BaseModel):
+    description: str | None = None
+
+
+class InviteRequest(BaseModel):
+    expires_in_hours: int = 72
+    role: str = "viewer"
+
+
+class InviteResponse(BaseModel):
+    invite_url: str
+    expires_in_hours: int
+    role: str
+
+
+class ImportResult(BaseModel):
+    imported: int
+    skipped: int

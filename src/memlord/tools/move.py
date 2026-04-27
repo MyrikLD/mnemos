@@ -36,6 +36,9 @@ async def move_memory(
             raise ValueError(f"Workspace {from_workspace!r} not found")
         from_ws_id = from_ws.id
 
+    if from_ws_id is None:
+        from_ws_id = (await ws_dao.get_personal()).id
+
     dao = MemoryDao(s, uid)
     memory_id = await dao.get_id_by_name(name, workspace_id=from_ws_id)
     if memory_id is None:

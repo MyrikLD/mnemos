@@ -4,21 +4,16 @@
 
 <div class="page-header">
     <h1 class="page-title">Memories</h1>
-    <div style="display:flex;gap:.5rem;align-items:center">
-        <button type="button" class="btn btn-ghost btn-sm" onclick="openConnectModal()">Quick Start</button>
-    </div>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="openConnectModal()">Quick Start</button>
 </div>
 
-<!-- Quick Start modal -->
+<!-- Quick Start modal (unchanged) -->
 <div id="connect-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;overflow-y:auto;padding:1rem;">
     <div style="background:var(--surface);border-radius:var(--radius-lg);padding:1.5rem;max-width:560px;width:100%;box-shadow:var(--shadow-md);margin:auto;">
-
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
             <h2 style="font-size:1.0625rem;font-weight:600;letter-spacing:-.02em;margin:0;">Quick Start</h2>
             <button type="button" onclick="closeConnectModal()" style="background:none;border:none;cursor:pointer;color:var(--text-4);font-size:1.25rem;line-height:1;padding:.125rem .25rem;">&#x2715;</button>
         </div>
-
-        <!-- Step 1 -->
         <div style="display:flex;gap:.75rem;margin-bottom:1.25rem;">
             <div style="flex-shrink:0;width:1.375rem;height:1.375rem;border-radius:50%;background:var(--accent);color:#fff;font-size:.6875rem;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:.1rem;">1</div>
             <div style="flex:1;min-width:0;">
@@ -30,8 +25,6 @@
                     <button type="button" id="tab-cursor" onclick="switchTab('cursor')" style="flex:1;padding:.4rem .5rem;border:none;cursor:pointer;font-family:inherit;font-size:.75rem;font-weight:500;background:var(--surface-2);color:var(--text-3);border-right:1px solid var(--border);">Cursor</button>
                     <button type="button" id="tab-chatgpt" onclick="switchTab('chatgpt')" style="flex:1;padding:.4rem .5rem;border:none;cursor:pointer;font-family:inherit;font-size:.75rem;font-weight:500;background:var(--surface-2);color:var(--text-3);">ChatGPT</button>
                 </div>
-
-                <!-- Claude Code panel -->
                 <div id="panel-code">
                     <p style="font-size:.8125rem;color:var(--text-3);margin-bottom:.375rem;">Run in terminal:</p>
                     <div style="position:relative;margin-bottom:.625rem;">
@@ -39,91 +32,231 @@
                         <button id="copy-cmd-btn" type="button" onclick="copySnippet('connect-cmd','copy-cmd-btn')" style="position:absolute;top:.3rem;right:.35rem;" class="btn btn-sm">Copy</button>
                     </div>
                     <p style="font-size:.8125rem;color:var(--text-3);">Then inside Claude Code run <code style="font-family:monospace;background:var(--surface-2);padding:.1em .3em;border-radius:4px;">/mcp</code>, select <strong>memlord</strong> and complete the OAuth flow.</p>
-                    <p style="font-size:.75rem;color:var(--text-4);margin-top:.375rem;">Self-hosting? Use your domain, e.g. <code style="font-family:monospace;color:var(--text-3);">https://memlord.example.com/mcp</code></p>
                 </div>
-
-                <!-- Claude Desktop panel -->
                 <div id="panel-desktop" style="display:none;">
                     <p style="font-size:.8125rem;color:var(--text-3);margin-bottom:.375rem;">Add to <code style="font-family:monospace;background:var(--surface-2);padding:.1em .3em;border-radius:4px;font-size:.8em;">claude_desktop_config.json</code>:</p>
                     <div style="position:relative;margin-bottom:.625rem;">
                         <pre id="connect-json" style="background:var(--nav-bg);color:#e2e8f0;border:1px solid var(--nav-border);border-radius:var(--radius-sm);padding:.5rem 3.5rem .5rem .75rem;font-family:'Menlo','Cascadia Code','Consolas','Monaco',monospace;font-size:.75rem;overflow-x:auto;white-space:pre;line-height:1.5;margin:0;"></pre>
                         <button id="copy-json-btn" type="button" onclick="copySnippet('connect-json','copy-json-btn')" style="position:absolute;top:.3rem;right:.35rem;" class="btn btn-sm">Copy</button>
                     </div>
-                    <p style="font-size:.8125rem;color:var(--text-3);">Restart Claude Desktop — it will prompt you to sign in on first use.</p>
-                    <p style="font-size:.75rem;color:var(--text-4);margin-top:.375rem;">
-                        macOS: <code style="font-family:monospace;">~/Library/Application Support/Claude/claude_desktop_config.json</code><br>
-                        Windows: <code style="font-family:monospace;">%APPDATA%\Claude\claude_desktop_config.json</code>
-                    </p>
                 </div>
-
-                <!-- Claude.ai panel -->
                 <div id="panel-web" style="display:none;">
                     <p style="font-size:.8125rem;color:var(--text-3);margin-bottom:.375rem;">Go to <strong>claude.ai → Settings → Connectors</strong> and add this URL:</p>
                     <div style="position:relative;margin-bottom:.625rem;">
                         <pre id="connect-url" style="background:var(--nav-bg);color:#e2e8f0;border:1px solid var(--nav-border);border-radius:var(--radius-sm);padding:.5rem 3.5rem .5rem .75rem;font-family:'Menlo','Cascadia Code','Consolas','Monaco',monospace;font-size:.75rem;overflow-x:auto;white-space:pre;line-height:1.5;margin:0;"></pre>
                         <button id="copy-url-btn" type="button" onclick="copySnippet('connect-url','copy-url-btn')" style="position:absolute;top:.3rem;right:.35rem;" class="btn btn-sm">Copy</button>
                     </div>
-                    <p style="font-size:.8125rem;color:var(--text-3);">Authorize the OAuth flow when prompted.</p>
-                    <p style="font-size:.75rem;color:var(--text-4);margin-top:.375rem;">The server must be publicly reachable — localhost won't work.</p>
                 </div>
-
-                <!-- Cursor panel -->
                 <div id="panel-cursor" style="display:none;">
-                    <p style="font-size:.8125rem;color:var(--text-3);margin-bottom:.375rem;">Add to <code style="font-family:monospace;background:var(--surface-2);padding:.1em .3em;border-radius:4px;font-size:.8em;">~/.cursor/mcp.json</code> (global) or <code style="font-family:monospace;background:var(--surface-2);padding:.1em .3em;border-radius:4px;font-size:.8em;">.cursor/mcp.json</code> (project):</p>
+                    <p style="font-size:.8125rem;color:var(--text-3);margin-bottom:.375rem;">Add to <code style="font-family:monospace;background:var(--surface-2);padding:.1em .3em;border-radius:4px;font-size:.8em;">~/.cursor/mcp.json</code>:</p>
                     <div style="position:relative;margin-bottom:.625rem;">
                         <pre id="connect-cursor-json" style="background:var(--nav-bg);color:#e2e8f0;border:1px solid var(--nav-border);border-radius:var(--radius-sm);padding:.5rem 3.5rem .5rem .75rem;font-family:'Menlo','Cascadia Code','Consolas','Monaco',monospace;font-size:.75rem;overflow-x:auto;white-space:pre;line-height:1.5;margin:0;"></pre>
                         <button id="copy-cursor-btn" type="button" onclick="copySnippet('connect-cursor-json','copy-cursor-btn')" style="position:absolute;top:.3rem;right:.35rem;" class="btn btn-sm">Copy</button>
                     </div>
-                    <p style="font-size:.8125rem;color:var(--text-3);">Restart Cursor — OAuth flow will open automatically on first use.</p>
                 </div>
-
-                <!-- ChatGPT panel -->
                 <div id="panel-chatgpt" style="display:none;">
                     <p style="font-size:.8125rem;color:var(--text-3);margin-bottom:.625rem;">Go to <strong>Settings → Apps → Add</strong> and enter this URL:</p>
                     <div style="position:relative;margin-bottom:.625rem;">
                         <pre id="connect-chatgpt-url" style="background:var(--nav-bg);color:#e2e8f0;border:1px solid var(--nav-border);border-radius:var(--radius-sm);padding:.5rem 3.5rem .5rem .75rem;font-family:'Menlo','Cascadia Code','Consolas','Monaco',monospace;font-size:.75rem;overflow-x:auto;white-space:pre;line-height:1.5;margin:0;"></pre>
                         <button id="copy-chatgpt-btn" type="button" onclick="copySnippet('connect-chatgpt-url','copy-chatgpt-btn')" style="position:absolute;top:.3rem;right:.35rem;" class="btn btn-sm">Copy</button>
                     </div>
-                    <p style="font-size:.8125rem;color:var(--text-3);">Authorize the OAuth flow when prompted.</p>
-                    <p style="font-size:.75rem;color:var(--text-4);margin-top:.375rem;">Requires Pro/Plus/Business/Enterprise. The server must be publicly reachable — localhost won't work.</p>
                 </div>
             </div>
         </div>
-
         <hr style="margin:0 0 1.25rem;">
-
-        <!-- Step 2 -->
         <div style="display:flex;gap:.75rem;margin-bottom:1.25rem;">
             <div style="flex-shrink:0;width:1.375rem;height:1.375rem;border-radius:50%;background:var(--accent);color:#fff;font-size:.6875rem;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:.1rem;">2</div>
             <div style="flex:1;min-width:0;">
                 <p style="font-size:.875rem;font-weight:600;color:var(--text-2);margin-bottom:.375rem;">Use workspaces for projects <span style="font-size:.75rem;font-weight:400;color:var(--text-4);">— optional</span></p>
-                <p style="font-size:.8125rem;color:var(--text-3);margin-bottom:.375rem;">By default memories are personal. For project-specific memory, <a href="/ui/workspaces" onclick="closeConnectModal()">create a workspace</a> and give it a clear description — e.g. <em>"Work memories for the Acme iOS project"</em>.</p>
-                <p style="font-size:.8125rem;color:var(--text-3);">Before storing a memory Claude will check your workspaces and pick the right one automatically based on context. No need to mention the workspace name explicitly.</p>
+                <p style="font-size:.8125rem;color:var(--text-3);">By default memories are personal. For project-specific memory, <a href="/ui/workspaces" onclick="closeConnectModal()">create a workspace</a> and give it a clear description.</p>
             </div>
         </div>
-
         <hr style="margin:0 0 1.25rem;">
-
-        <!-- Step 3 -->
         <div style="display:flex;gap:.75rem;margin-bottom:1.25rem;">
             <div style="flex-shrink:0;width:1.375rem;height:1.375rem;border-radius:50%;background:var(--accent);color:#fff;font-size:.6875rem;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:.1rem;">3</div>
             <div style="flex:1;min-width:0;">
                 <p style="font-size:.875rem;font-weight:600;color:var(--text-2);margin-bottom:.375rem;">Share a workspace with teammates <span style="font-size:.75rem;font-weight:400;color:var(--text-4);">— optional</span></p>
-                <p style="font-size:.8125rem;color:var(--text-3);margin-bottom:.375rem;">Open the workspace, click <strong>Generate invite link</strong>, and send it to your teammate. The link is one-time use and expires in 72 hours.</p>
-                <p style="font-size:.8125rem;color:var(--text-3);">Once they join, everyone on the team references the same workspace name in their prompts and Claude shares memory across all members.</p>
-                <div style="margin-top:.625rem;">
-                    <a href="/ui/workspaces" onclick="closeConnectModal()" class="btn btn-ghost btn-sm">Go to Workspaces →</a>
-                </div>
+                <p style="font-size:.8125rem;color:var(--text-3);">Open the workspace, click <strong>Generate invite link</strong>, and send it to your teammate.</p>
+                <div style="margin-top:.625rem;"><a href="/ui/workspaces" onclick="closeConnectModal()" class="btn btn-ghost btn-sm">Go to Workspaces →</a></div>
             </div>
         </div>
-
         <div style="display:flex;justify-content:flex-end;">
             <button type="button" class="btn btn-ghost" onclick="closeConnectModal()">Close</button>
         </div>
     </div>
 </div>
 
+<div x-data="memoriesPage()" x-init="init()">
+
+    <div class="toolbar">
+        <select class="filter-input" style="max-width:200px"
+                x-model="workspace" @change="onFilterChange()">
+            <option value="">All sources</option>
+            <template x-for="ws in workspaces" :key="ws.id">
+                <option :value="ws.is_personal ? '__personal__' : ws.name"
+                        x-text="ws.is_personal ? 'Personal' : ws.name"></option>
+            </template>
+        </select>
+        <select class="filter-input" style="max-width:200px"
+                x-model="memoryType" @change="onFilterChange()">
+            <option value="">All types</option>
+            <template x-for="t in ['fact','preference','instruction','feedback','decision']" :key="t">
+                <option :value="t" x-text="t"></option>
+            </template>
+        </select>
+        <input class="filter-input" placeholder="Filter by tag…" style="max-width:200px"
+               x-model="tag" @input.debounce.400ms="onFilterChange()">
+        <button x-show="memoryType || tag || workspace"
+                class="btn btn-ghost btn-sm" @click="clearFilters()">Clear filters</button>
+    </div>
+
+    <p class="info-bar" x-show="!loading">
+        <span x-text="total + ' memor' + (total === 1 ? 'y' : 'ies')"></span>
+        <template x-if="workspace === '__personal__'">
+            <span>· source: <strong>Personal</strong></span>
+        </template>
+        <template x-if="workspace && workspace !== '__personal__'">
+            <span>· workspace: <strong x-text="workspace"></strong></span>
+        </template>
+        <template x-if="memoryType">
+            <span>· type: <strong x-text="memoryType"></strong></span>
+        </template>
+        <template x-if="tag">
+            <span>· tag: <strong x-text="'#' + tag"></strong></span>
+        </template>
+    </p>
+
+    <div x-show="loading" style="text-align:center;padding:3rem;color:var(--text-4)">Loading…</div>
+
+    <template x-for="m in memories" :key="m.id">
+        <div class="card" :class="m.memory_type ? 'card--' + m.memory_type : ''">
+            <div x-show="m.workspace_name" style="font-size:.75rem;font-weight:600;color:#a78bfa;padding:.25rem 0 .1rem;letter-spacing:.03em">
+                <a :href="'/?workspace=' + (m.workspace_name === 'Personal' ? '__personal__' : m.workspace_name)"
+                   style="color:inherit;text-decoration:none">⬡ <span x-text="m.workspace_name"></span></a>
+            </div>
+            <div class="card-header">
+                <a :href="'/memory/' + m.workspace_id + '/' + m.id" style="flex:1;min-width:0;color:inherit;text-decoration:none;">
+                    <div class="card-content" x-text="m.content.length > 280 ? m.content.slice(0, 280) + '…' : m.content"></div>
+                </a>
+                <div class="card-actions">
+                    <button class="btn btn-sm btn-danger"
+                            @click="deleteMemory(m.workspace_id, m.id)">Delete</button>
+                </div>
+            </div>
+            <div class="card-meta">
+                <template x-if="m.memory_type">
+                    <span class="badge badge-type" :class="'badge-type--' + m.memory_type" x-text="m.memory_type"></span>
+                </template>
+                <template x-for="t in m.tags" :key="t">
+                    <a :href="'/?tag=' + t" class="tag" x-text="'#' + t"></a>
+                </template>
+                <span class="card-date" x-text="m.created_at"></span>
+            </div>
+        </div>
+    </template>
+
+    <div x-show="!loading && memories.length === 0" class="empty-state">
+        <div class="empty-state-icon">🧠</div>
+        <div class="empty-state-title">No memories yet</div>
+        <div class="empty-state-desc">Memories stored via MCP will appear here.</div>
+    </div>
+
+    <div x-show="totalPages > 1" class="pagination">
+        <button x-show="page > 1" class="btn btn-ghost btn-sm" @click="goToPage(page - 1)">← Prev</button>
+        <span class="page-info" x-text="'Page ' + page + ' of ' + totalPages"></span>
+        <button x-show="page < totalPages" class="btn btn-ghost btn-sm" @click="goToPage(page + 1)">Next →</button>
+    </div>
+
+</div>
+
 <script>
+function memoriesPage() {
+    const params = new URLSearchParams(window.location.search);
+    return {
+        memories: [],
+        workspaces: [],
+        total: 0,
+        page: parseInt(params.get('page') || '1'),
+        totalPages: 0,
+        loading: true,
+        memoryType: params.get('memory_type') || '',
+        tag: params.get('tag') || '',
+        workspace: params.get('workspace') || '',
+
+        async init() {
+            const [mems, wss] = await Promise.all([
+                this._fetchMemories(),
+                fetch('/api/workspaces').then(r => r.json()),
+            ]);
+            this.memories = mems.memories;
+            this.total = mems.total;
+            this.totalPages = mems.total_pages;
+            this.workspaces = wss.sort((a, b) => b.is_personal - a.is_personal);
+            this.loading = false;
+        },
+
+        async load() {
+            this.loading = true;
+            const data = await this._fetchMemories();
+            this.memories = data.memories;
+            this.total = data.total;
+            this.totalPages = data.total_pages;
+            this.loading = false;
+        },
+
+        _fetchMemories() {
+            return fetch('/api/memories', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    page: this.page,
+                    page_size: 20,
+                    memory_type: this.memoryType || null,
+                    tag: this.tag,
+                    workspace: this.workspace,
+                }),
+            }).then(r => r.json());
+        },
+
+        onFilterChange() {
+            this.page = 1;
+            this._syncUrl();
+            this.load();
+        },
+
+        clearFilters() {
+            this.workspace = '';
+            this.memoryType = '';
+            this.tag = '';
+            this.page = 1;
+            this._syncUrl();
+            this.load();
+        },
+
+        async deleteMemory(wsId, id) {
+            if (!confirm('Delete this memory?')) return;
+            const r = await fetch('/api/memories/' + wsId + '/' + id, { method: 'DELETE' });
+            if (r.ok) this.memories = this.memories.filter(m => m.id !== id);
+        },
+
+        goToPage(p) {
+            this.page = p;
+            this._syncUrl();
+            this.load();
+        },
+
+        _syncUrl() {
+            const p = new URLSearchParams();
+            if (this.page > 1) p.set('page', this.page);
+            if (this.memoryType) p.set('memory_type', this.memoryType);
+            if (this.tag) p.set('tag', this.tag);
+            if (this.workspace) p.set('workspace', this.workspace);
+            const qs = p.toString();
+            history.replaceState(null, '', qs ? '/?' + qs : '/');
+        },
+    };
+}
+
 function openConnectModal() {
     var origin = window.location.origin;
     document.getElementById('connect-cmd').textContent = 'claude mcp add --transport http memlord ' + origin + '/mcp';
@@ -160,102 +293,5 @@ document.getElementById('connect-modal').addEventListener('click', function(e) {
     if (e.target === this) closeConnectModal();
 });
 </script>
-
-
-<form method="get" class="toolbar">
-    {% if workspaces %}
-    <select class="filter-input" name="workspace" style="max-width:200px">
-        <option value="">All sources</option>
-        {% for ws in workspaces | sort(attribute='is_personal', reverse=true) %}
-        {% if ws.is_personal %}
-        <option value="__personal__" {% if workspace == "__personal__" %}selected{% endif %}>Personal</option>
-        {% else %}
-        <option value="{{ ws.name }}" {% if workspace == ws.name %}selected{% endif %}>{{ ws.name }}</option>
-        {% endif %}
-        {% endfor %}
-    </select>
-    {% endif %}
-    <select class="filter-input" name="memory_type" style="max-width:200px">
-        <option value="">All types</option>
-        {% for t in ["fact", "preference", "instruction", "feedback"] %}
-        <option value="{{ t }}" {% if memory_type == t %}selected{% endif %}>{{ t }}</option>
-        {% endfor %}
-    </select>
-    <input class="filter-input" name="tag" placeholder="Filter by tag…"
-           value="{{ tag }}" style="max-width:200px">
-    <button type="submit" class="btn btn-ghost btn-sm">Apply</button>
-    {% if memory_type or tag or workspace %}
-    <a href="/" class="btn btn-ghost btn-sm">Clear filters</a>
-    {% endif %}
-</form>
-
-<p class="info-bar">
-    <span>{{ total }} memor{{ 'y' if total == 1 else 'ies' }}</span>
-    {% if workspace == "__personal__" %}
-    <span style="color:var(--text-4)">·</span>
-    <span>source: <strong>Personal</strong></span>
-    {% elif workspace %}
-    <span style="color:var(--text-4)">·</span>
-    <span>workspace: <strong>{{ workspace }}</strong></span>
-    {% endif %}
-    {% if memory_type %}
-    <span style="color:var(--text-4)">·</span>
-    <span>type: <strong>{{ memory_type }}</strong></span>
-    {% endif %}
-    {% if tag %}
-    <span style="color:var(--text-4)">·</span>
-    <span>tag: <strong>#{{ tag }}</strong></span>
-    {% endif %}
-</p>
-
-{% for m in memories %}
-<div id="mem-{{ m.id }}" class="card{% if m.memory_type %} card--{{ m.memory_type }}{% endif %}">
-    {% if m.workspace_name %}
-    <div style="font-size:.75rem;font-weight:600;color:#a78bfa;padding:.25rem 0 .1rem;letter-spacing:.03em">
-        <a href="/?workspace={{ '__personal__' if m.workspace_name == 'Personal' else m.workspace_name }}"
-           style="color:inherit;text-decoration:none">⬡ {{ m.workspace_name }}</a>
-    </div>
-    {% endif %}
-    <div class="card-header">
-        <a href="/memory/{{ m.id }}" style="flex:1; min-width:0; color:inherit; text-decoration:none;">
-            {% if m.name %}<div style="font-size:.7rem;font-weight:600;color:var(--text-4);margin-bottom:.2rem;font-family:monospace">{{ m.name }}</div>{% endif %}
-            <div class="card-content">{{ m.content | truncate(280) }}</div>
-        </a>
-        <div class="card-actions">
-            <button class="btn btn-sm btn-danger"
-                    hx-delete="/memory/{{ m.id }}"
-                    hx-target="#mem-{{ m.id }}"
-                    hx-swap="outerHTML"
-                    hx-confirm="Delete this memory?">Delete
-            </button>
-        </div>
-    </div>
-    <div class="card-meta">
-        {% if m.memory_type %}<span class="badge badge-type badge-type--{{ m.memory_type }}">{{ m.memory_type }}</span>{% endif %}
-        {% for t in m.tags %}<a href="/?tag={{ t }}" class="tag">#{{ t }}</a>{% endfor %}
-        <span class="card-date">{{ m.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
-    </div>
-</div>
-{% else %}
-<div class="empty-state">
-    <div class="empty-state-icon">🧠</div>
-    <div class="empty-state-title">No memories yet</div>
-    <div class="empty-state-desc">Memories stored via MCP will appear here.</div>
-</div>
-{% endfor %}
-
-{% if total_pages > 1 %}
-<div class="pagination">
-    {% if page > 1 %}
-    <a href="?page={{ page - 1 }}&memory_type={{ memory_type or '' }}&tag={{ tag }}&workspace={{ workspace }}"
-       class="btn btn-ghost btn-sm">← Prev</a>
-    {% endif %}
-    <span class="page-info">Page {{ page }} of {{ total_pages }}</span>
-    {% if page < total_pages %}
-    <a href="?page={{ page + 1 }}&memory_type={{ memory_type or '' }}&tag={{ tag }}&workspace={{ workspace }}"
-       class="btn btn-ghost btn-sm">Next →</a>
-    {% endif %}
-</div>
-{% endif %}
 
 {% endblock %}

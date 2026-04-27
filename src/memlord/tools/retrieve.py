@@ -1,5 +1,6 @@
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
+from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from memlord.auth import MCPUserDep
@@ -16,8 +17,8 @@ mcp = FastMCP()
 
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False))
 async def retrieve_memory(
-    query: str,
-    limit: int = 10,
+    query: str = Field(..., description="Query string"),
+    limit: int = Field(10, ge=1),
     similarity_threshold: float = settings.sim_threshold,
     memory_type: MemoryType | None = None,
     workspace: str | None = None,
@@ -58,7 +59,7 @@ async def retrieve_memory(
         MemoryResult(
             name=r.name,
             memory_type=r.memory_type,
-            tags=tags_map.get(r.id, []),
+            tags=tags_map.get(r.id, set()),
             metadata=meta_map.get(r.id, ({}, utcnow()))[0],
             created_at=meta_map.get(r.id, ({}, utcnow()))[1],
             rrf_score=r.rrf_score,

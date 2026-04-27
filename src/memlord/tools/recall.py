@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from dateparser.search import search_dates  # type: ignore[import-untyped]
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
+from pydantic import Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,8 +23,12 @@ mcp = FastMCP()
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False),
 )
 async def recall_memory(
-    query: str,
-    n_results: int = 5,
+    query: str = Field(
+        ...,
+        description="Query string",
+        examples=["last week", "yesterday", "about Python last month"],
+    ),
+    n_results: int = Field(5, ge=1),
     memory_type: MemoryType | None = None,
     workspace: str | None = None,
     s: AsyncSession = MCPSessionDep,  # type: ignore[assignment]

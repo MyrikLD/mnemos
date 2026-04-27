@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from argparse import ArgumentParser
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -9,6 +10,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from starlette import status
 
+from memlord.api import router as api_router
 from memlord.config import settings
 from memlord.db import session
 from memlord.server import mcp
@@ -60,7 +62,8 @@ async def health() -> JSONResponse:
         )
 
 
-# UI routes must be registered BEFORE the root mount so they take priority.
+# UI and API routes must be registered BEFORE the root mount so they take priority.
+app.include_router(api_router)
 app.include_router(ui_router)
 # Mount mcp_app at "/" so that OAuth /.well-known/* endpoints are at the root,
 # matching what MCP clients expect.  The MCP transport itself is at /mcp.
@@ -71,6 +74,8 @@ def main():
     parser = ArgumentParser(prog="Memlord")
     parser.add_argument("--stdio", action="store_true")
     args = parser.parse_args()
+
+    logging.basicConfig(level=settings.LOG_LEVEL)
 
     if args.stdio:
         asyncio.run(mcp.run_stdio_async())
