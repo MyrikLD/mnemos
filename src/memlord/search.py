@@ -100,8 +100,12 @@ async def hybrid_search(
     vec_ranks: dict[int, int] = {row.id: row.vec_rank for row in vec_rows}
     vec_distances: dict[int, float] = {row.id: row.distance for row in vec_rows}
     contents: dict[int, tuple[str, str, MemoryType, str, int]] = {
-        row.id: (row.name, row.content, row.memory_type, row.workspace, row.workspace_id) for row in bm25_rows
-    } | {row.id: (row.name, row.content, row.memory_type, row.workspace, row.workspace_id) for row in vec_rows}
+        row.id: (row.name, row.content, row.memory_type, row.workspace, row.workspace_id)
+        for row in bm25_rows
+    } | {
+        row.id: (row.name, row.content, row.memory_type, row.workspace, row.workspace_id)
+        for row in vec_rows
+    }
 
     # RRF fusion
     all_ids = set(bm25_ranks) | set(vec_ranks)

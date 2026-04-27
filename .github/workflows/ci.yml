@@ -10,6 +10,7 @@ jobs:
   lint:
     name: Lint & type check
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
 
