@@ -194,10 +194,7 @@ class MemoryDao:
 
         if values:
             final_name: str = await self._s.scalar(  # type: ignore[assignment]
-                update(Memory)
-                .where(Memory.id == memory_id)
-                .values(**values)
-                .returning(Memory.name)
+                update(Memory).where(Memory.id == memory_id).values(**values).returning(Memory.name)
             )
         else:
             final_name = await self._s.scalar(  # type: ignore[assignment]

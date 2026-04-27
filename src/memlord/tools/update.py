@@ -8,7 +8,8 @@ from memlord.auth import MCPUserDep
 from memlord.dao import MemoryDao
 from memlord.dao.workspace import WorkspaceDao
 from memlord.db import MCPSessionDep
-from memlord.schemas import MemoryType, StoreResult
+from memlord.schemas import MemoryType
+from memlord.schemas.tools import StoreResult
 
 mcp = FastMCP()
 

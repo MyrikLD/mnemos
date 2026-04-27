@@ -12,7 +12,8 @@ from memlord.dao import MemoryDao
 from memlord.dao.workspace import WorkspaceDao
 from memlord.db import MCPSessionDep
 from memlord.models import Memory
-from memlord.schemas import MemoryType, RecallPage, RecallResult
+from memlord.schemas import MemoryType
+from memlord.schemas.tools import RecallPage, RecallResult
 from memlord.search import hybrid_search
 
 mcp = FastMCP()

@@ -6,7 +6,7 @@ from memlord.dao import MemoryDao
 from memlord.dao.workspace import WorkspaceDao
 from memlord.db import APISessionDep
 from memlord.models import Memory
-from memlord.schemas import SearchItem, SearchResponse
+from memlord.schemas.api import SearchItem, SearchResponse
 from memlord.search import hybrid_search
 from memlord.ui.utils import APIUserDep
 

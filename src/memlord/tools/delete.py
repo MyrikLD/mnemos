@@ -6,7 +6,7 @@ from memlord.auth import MCPUserDep
 from memlord.dao import MemoryDao
 from memlord.dao.workspace import WorkspaceDao
 from memlord.db import MCPSessionDep
-from memlord.schemas import DeleteResult
+from memlord.schemas.tools import DeleteResult
 
 mcp = FastMCP()
 

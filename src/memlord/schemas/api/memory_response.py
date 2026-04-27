@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from memlord.schemas.pagination import Paginated
+from ..pagination import Paginated
 
 
 class MemoriesFilter(BaseModel):

@@ -12,14 +12,13 @@ from memlord.models import Memory
 from memlord.schemas import (
     CreateWorkspaceRequest,
     DescriptionRequest,
-    ImportItem,
-    ImportResult,
     InviteRequest,
     InviteResponse,
     RenameRequest,
     WorkspaceDetailResponse,
     WorkspaceInfo,
 )
+from memlord.schemas.api import ImportItem, ImportResult
 from memlord.schemas.workspace import WorkspaceRole
 from memlord.ui.utils import APIUserDep
 from memlord.utils.dt import utcnow

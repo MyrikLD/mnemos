@@ -6,13 +6,14 @@ from memlord.dao import MemoryDao
 from memlord.dao.workspace import WorkspaceDao
 from memlord.db import APISessionDep
 from memlord.models import Memory, MemoryTag, Tag
-from memlord.schemas import MemoryType, UpdateMemoryRequest
-from memlord.schemas.memory_response import (
+from memlord.schemas import MemoryType
+from memlord.schemas.api import (
     MemoriesFilter,
     MemoriesResponse,
     MemoryDetail,
     MemoryItem,
     MoveRequest,
+    UpdateMemoryRequest,
     WorkspaceSimple,
 )
 from memlord.schemas.workspace import WorkspaceRole

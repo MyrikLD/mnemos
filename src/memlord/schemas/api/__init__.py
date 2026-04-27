@@ -1,4 +1,4 @@
-from .import_item import ImportItem
+from .import_item import ImportItem, ImportResult
 from .memory_response import (
     MemoriesFilter,
     MemoriesResponse,

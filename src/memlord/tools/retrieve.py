@@ -8,7 +8,8 @@ from memlord.config import settings
 from memlord.dao import MemoryDao
 from memlord.dao.workspace import WorkspaceDao
 from memlord.db import MCPSessionDep
-from memlord.schemas import MemoryResult, MemoryType
+from memlord.schemas import MemoryType
+from memlord.schemas.tools import MemoryResult
 from memlord.search import hybrid_search
 from memlord.utils.dt import utcnow
 

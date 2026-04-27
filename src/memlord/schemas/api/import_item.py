@@ -21,3 +21,8 @@ class ImportItem(BaseModel):
         if not data.get("name"):
             data["name"] = (data.get("content") or "")[:60].strip()
         return data
+
+
+class ImportResult(BaseModel):
+    imported: int
+    skipped: int

@@ -9,7 +9,8 @@ from memlord.dao import MemoryDao
 from memlord.dao.workspace import WorkspaceDao
 from memlord.db import MCPSessionDep
 from memlord.models import Memory, MemoryTag, Tag, Workspace
-from memlord.schemas import MemoryItem, MemoryPage, MemoryType
+from memlord.schemas import MemoryType
+from memlord.schemas.tools import MemoryItem, MemoryPage
 
 mcp = FastMCP()
 
