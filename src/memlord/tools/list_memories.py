@@ -1,5 +1,3 @@
-import math
-
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from pydantic import Field
@@ -66,15 +64,12 @@ async def list_memories(
 
     rows = (await s.execute(q)).mappings().all()
 
-    total_pages = math.ceil(total / page_size) if total else 0
-
     if not rows:
         return MemoryPage(
             items=[],
             total=total,
             page=page,
             page_size=page_size,
-            total_pages=total_pages,
         )
 
     ids: list[int] = [row["id"] for row in rows]
@@ -91,5 +86,4 @@ async def list_memories(
         total=total,
         page=page,
         page_size=page_size,
-        total_pages=total_pages,
     )

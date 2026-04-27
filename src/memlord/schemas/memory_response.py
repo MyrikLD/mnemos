@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+from memlord.schemas.pagination import Paginated
+
 
 class MemoriesFilter(BaseModel):
     page: int = 1
@@ -39,12 +41,7 @@ class MemoryDetail(BaseModel):
     writable_workspaces: list[WorkspaceSimple]
 
 
-class MemoriesResponse(BaseModel):
-    memories: list[MemoryItem]
-    total: int
-    page: int
-    page_size: int
-    total_pages: int
+class MemoriesResponse(Paginated[MemoryItem]): ...
 
 
 class MoveRequest(BaseModel):

@@ -97,5 +97,4 @@ async def search_by_tag(
         total=len(rows),
         page=1,
         page_size=len(rows),
-        total_pages=1,
     )

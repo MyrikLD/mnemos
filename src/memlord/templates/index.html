@@ -189,7 +189,7 @@ function memoriesPage() {
                 this._fetchMemories(),
                 fetch('/api/workspaces').then(r => r.json()),
             ]);
-            this.memories = mems.memories;
+            this.memories = mems.items;
             this.total = mems.total;
             this.totalPages = mems.total_pages;
             this.workspaces = wss.sort((a, b) => b.is_personal - a.is_personal);
@@ -199,7 +199,7 @@ function memoriesPage() {
         async load() {
             this.loading = true;
             const data = await this._fetchMemories();
-            this.memories = data.memories;
+            this.memories = data.items;
             this.total = data.total;
             this.totalPages = data.total_pages;
             this.loading = false;

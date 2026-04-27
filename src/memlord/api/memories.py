@@ -1,5 +1,3 @@
-import math
-
 import sqlalchemy as sa
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
@@ -78,7 +76,6 @@ async def list_memories(
         .mappings()
         .all()
     )
-    total_pages = math.ceil(total / page_size) if total else 0
     ids = [row["id"] for row in rows]
     tags_map = await MemoryDao(s, user.id).fetch_tags(ids)
     ws_display = {ws.id: ("Personal" if ws.is_personal else ws.name) for ws in workspaces}
@@ -98,11 +95,10 @@ async def list_memories(
     ]
 
     return MemoriesResponse(
-        memories=memories,
+        items=memories,
         total=total,
         page=body.page,
         page_size=page_size,
-        total_pages=total_pages,
     )
 
 
