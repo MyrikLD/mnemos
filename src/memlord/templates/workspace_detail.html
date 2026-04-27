@@ -114,22 +114,20 @@
             </template>
 
             <!-- Danger zone -->
-            <template x-if="!ws.is_personal">
-                <template x-if="ws.role === 'owner'">
-                    <div class="detail-card" style="border-color:var(--danger-border)">
-                        <div class="section-title" style="color:var(--danger-text)">Danger zone</div>
-                        <p style="font-size:.875rem;color:var(--text-3);margin-bottom:1rem">
-                            Deleting this workspace is permanent. All memories in this workspace will be deleted.
-                        </p>
-                        <button class="btn btn-danger" @click="deleteWorkspace()">Delete workspace</button>
-                    </div>
-                </template>
-                <template x-if="ws.role !== 'owner'">
-                    <div class="detail-card">
-                        <div class="section-title">Leave workspace</div>
-                        <button class="btn btn-danger" @click="leaveWorkspace()">Leave workspace</button>
-                    </div>
-                </template>
+            <template x-if="!ws.is_personal && ws.role === 'owner'">
+                <div class="detail-card" style="border-color:var(--danger-border)">
+                    <div class="section-title" style="color:var(--danger-text)">Danger zone</div>
+                    <p style="font-size:.875rem;color:var(--text-3);margin-bottom:1rem">
+                        Deleting this workspace is permanent. All memories in this workspace will be deleted.
+                    </p>
+                    <button class="btn btn-danger" @click="deleteWorkspace()">Delete workspace</button>
+                </div>
+            </template>
+            <template x-if="!ws.is_personal && ws.role !== 'owner'">
+                <div class="detail-card">
+                    <div class="section-title">Leave workspace</div>
+                    <button class="btn btn-danger" @click="leaveWorkspace()">Leave workspace</button>
+                </div>
             </template>
         </div>
     </template>
